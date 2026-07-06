@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wkr.storeserver.mapper.AppointmentMapper">
+
+    <select id="list" resultType="com.wkr.storepojo.vo.AppointmentVO">
+        SELECT
+        a.id,
+        a.appointment_no as appointmentNo,
+        a.customer_id as customerId,
+        c.name AS customerName,
+        c.phone AS customerPhone,
+        a.staff_id as staffId,
+        s.name as staffName,
+        a.appointment_time as appointmentTime,
+        a.status,
+        a.total_duration_minutes AS totalDurationMinutes,
+        a.remark,
+        a.update_time AS updateTime,
+        a.create_time AS createTime
+        FROM appointment a
+        LEFT JOIN customer_profile c ON a.customer_id = c.id
+        LEFT JOIN staff_member s ON a.staff_id = s.id
+        <where>
+            <if test="dto.customerName != null and dto.customerName != ''">
+                AND c.name LIKE CONCAT('%', #{dto.customerName}, '%')
+            </if>
+            <if test="dto.staffName != null and dto.staffName != ''">
+                AND s.name LIKE CONCAT('%', #{dto.staffName}, '%')
+            </if>
+            <if test="dto.status != null">
+                AND a.status = #{dto.status}
+            </if>
+            <if test="dto.beginTime != null and dto.endTime != null">
+                AND a.appointment_time BETWEEN #{dto.beginTime} AND #{dto.endTime}
+            </if>
+        </where>
+        ORDER BY a.appointment_time DESC
+    </select>
+</mapper>

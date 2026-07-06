@@ -1,0 +1,46 @@
+# store-server/src/main/resources/application.yml
+server:
+  port: ${STORE_PORT:8080}
+
+spring:
+  application:
+    name: store-appointment-server
+
+  cache:
+    type: redis
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${STORE_DB_HOST:localhost}:${STORE_DB_PORT:3306}/${STORE_DB_DATABASE:db_platform}?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${STORE_DB_USERNAME:root}
+    password: ${STORE_DB_PASSWORD:12345678}
+
+  data:
+    redis:
+      host: ${STORE_REDIS_HOST:localhost}
+      port: ${STORE_REDIS_PORT:6379}
+      password: ${STORE_REDIS_PASSWORD:}
+      database: ${STORE_REDIS_DATABASE:0}
+      timeout: 3000ms
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  type-aliases-package: com.wkr.storepojo.entity
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+store:
+  demo:
+    read-only: ${STORE_DEMO_READ_ONLY:false}
+
+sky:
+  jwt:
+    admin-secret-key: ${STORE_JWT_ADMIN_SECRET_KEY:itcast}
+    admin-ttl: ${STORE_JWT_ADMIN_TTL:7200000}
+    admin-token-name: ${STORE_JWT_ADMIN_TOKEN_NAME:token}

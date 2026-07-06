@@ -1,0 +1,1789 @@
+# 门店后台管理系统重构接口文档
+
+## 1. 文档说明
+
+本文档用于 `beauty-console` 重构后的后台接口设计，Controller、Service、Mapper 后续按本文档补齐。
+
+- 接口前缀：`/admin`
+- 数据格式：`application/json`
+- 字符集：`UTF-8`
+- 时间格式：`yyyy-MM-dd HH:mm:ss`
+- 日期格式：`yyyy-MM-dd`
+- 金额类型：`BigDecimal`
+- 主键类型：`Long`
+- 分页返回：`Result<PageResult>`
+- 普通返回：`Result<T>`
+
+## 2. 统一返回格式
+
+### 2.1 普通返回
+
+```json
+{
+  "code": 1,
+  "msg": null,
+  "data": {}
+}
+```
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| code | Integer | 1 成功，0 失败 |
+| msg | String | 返回消息 |
+| data | Object | 返回数据 |
+
+### 2.2 分页返回
+
+```json
+{
+  "code": 1,
+  "msg": null,
+  "data": {
+    "total": 100,
+    "records": []
+  }
+}
+```
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| total | Long | 总记录数 |
+| records | Array | 当前页数据 |
+
+### 2.3 分页参数
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| page | Integer | 否 | 页码，默认 1 |
+| pageSize | Integer | 否 | 每页条数，默认 10，最大 200 |
+
+## 3. 认证说明
+
+除登录接口外，其余后台接口都需要携带 Token。
+
+```http
+token: <登录返回的token>
+```
+
+当前配置项：
+
+```yaml
+sky:
+  jwt:
+    admin-token-name: token
+```
+
+## 4. 枚举约定
+
+| 枚举 | 值 | 说明 |
+|---|---|---|
+| roleCode | admin / staff / readonly | 管理员 / 员工 / 只读账号 |
+| gender | 1 / 2 | 男 / 女 |
+| commonStatus | 0 / 1 | 停用 / 启用 |
+| customerLevel | 普通 / 银卡 / 金卡 / VIP | 客户等级 |
+| appointmentStatus | 0 / 1 / 2 / 3 | 待确认 / 已确认 / 已完成 / 已取消 |
+| orderType | service / time_card / care_card / member_card / course_card | 服务 / 次卡 / 护理卡 / 会员卡 / 疗程卡 |
+| payStatus | 0 / 1 / 2 / 3 | 未支付 / 部分支付 / 已支付 / 已退款 |
+| debtStatus | 0 / 1 / 2 | 无欠款 / 分期中 / 已结清 |
+| orderStatus | 0 / 1 / 2 | 待服务 / 已完成 / 已取消 |
+| paymentMethod | wechat / alipay / cash / time_card | 微信 / 支付宝 / 现金 / 次卡 |
+| paymentRecordStatus | 0 / 1 / 2 / 3 | 未确认 / 成功 / 退款 / 作废 |
+| inventoryChangeType | stock_in / stock_out / check / loss / return | 入库 / 出库 / 盘点 / 报损 / 退货 |
+
+## 5. 用户接口
+
+Controller：`SysUserController`
+
+基础路径：`/admin/users`
+
+Swagger：`@Api(tags = "用户相关接口")`
+
+### 5.1 登录
+
+```http
+POST /admin/users/login
+```
+
+请求参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| username | String | 是 | 登录账号 |
+| password | String | 是 | 登录密码 |
+
+请求示例：
+
+```json
+{
+  "username": "admin",
+  "password": "123456"
+}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 用户ID |
+| username | String | 登录账号 |
+| roleCode | String | 角色编码 |
+| roleName | String | 角色名称 |
+| staffId | Long | 关联员工ID |
+| staffName | String | 员工姓名 |
+| status | Integer | 状态：0禁用，1启用 |
+| token | String | JWT |
+
+返回示例：
+
+```json
+{
+  "code": 1,
+  "msg": null,
+  "data": {
+    "id": 1001,
+    "username": "admin",
+    "roleCode": "admin",
+    "roleName": "管理员",
+    "staffId": 1001,
+    "staffName": "测试员工001",
+    "status": 1,
+    "token": "eyJhbGciOiJIUzI1NiJ9..."
+  }
+}
+```
+
+### 5.2 分页查询用户列表
+
+```http
+GET /admin/users
+```
+
+查询参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| page | Integer | 否 | 页码 |
+| pageSize | Integer | 否 | 每页条数 |
+| username | String | 否 | 登录账号，模糊查询 |
+| roleCode | String | 否 | 角色编码：admin/staff/readonly |
+| status | Integer | 否 | 状态：0禁用，1启用 |
+
+请求示例：
+
+```http
+GET /admin/users?page=1&pageSize=10&username=admin&roleCode=admin&status=1
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| total | Long | 总记录数 |
+| records | Array<SysUserVO> | 用户列表 |
+
+`SysUserVO` 字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 用户ID |
+| username | String | 登录账号 |
+| roleCode | String | 角色编码 |
+| roleName | String | 角色名称 |
+| staffId | Long | 关联员工ID |
+| staffName | String | 员工姓名 |
+| status | Integer | 状态：0禁用，1启用 |
+| statusName | String | 状态名称 |
+| lastLoginTime | DateTime | 最后登录时间 |
+| createTime | DateTime | 创建时间 |
+| updateTime | DateTime | 更新时间 |
+
+返回示例：
+
+```json
+{
+  "code": 1,
+  "msg": null,
+  "data": {
+    "total": 3,
+    "records": [
+      {
+        "id": 1001,
+        "username": "admin",
+        "roleCode": "admin",
+        "roleName": "管理员",
+        "staffId": 1001,
+        "staffName": "测试员工001",
+        "status": 1,
+        "statusName": "启用",
+        "lastLoginTime": "2026-07-04 15:38:20",
+        "createTime": "2026-07-04 15:38:20",
+        "updateTime": "2026-07-04 15:38:31"
+      }
+    ]
+  }
+}
+```
+
+### 5.3 查询用户详情
+
+```http
+GET /admin/users/{id}
+```
+
+路径参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| id | Long | 是 | 用户ID |
+
+返回字段：同 `SysUserVO`。
+
+### 5.4 新增用户
+
+```http
+POST /admin/users
+```
+
+请求参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| username | String | 是 | 登录账号 |
+| passwordHash | String | 否 | 登录密码/密码哈希 |
+| roleCode | String | 是 | 角色：admin/staff/readonly |
+| staffId | Long | 否 | 关联员工ID |
+| status | Integer | 是 | 状态：0禁用，1启用 |
+
+请求示例：
+
+```json
+{
+  "username": "staff001",
+  "passwordHash": "123456",
+  "roleCode": "staff",
+  "staffId": 1002,
+  "status": 1
+}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 新增用户ID |
+
+### 5.5 修改用户
+
+```http
+PUT /admin/users/{id}
+```
+
+路径参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| id | Long | 是 | 用户ID |
+
+请求参数：同新增用户。
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否修改成功 |
+
+### 5.6 启用或禁用用户
+
+```http
+PATCH /admin/users/{id}/status
+```
+
+路径参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| id | Long | 是 | 用户ID |
+
+请求参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| status | Integer | 是 | 0禁用，1启用 |
+
+请求示例：
+
+```json
+{
+  "status": 1
+}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否修改成功 |
+
+### 5.7 删除用户
+
+```http
+DELETE /admin/users/{id}
+```
+
+路径参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| id | Long | 是 | 用户ID |
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否删除成功 |
+
+## 6. 员工接口
+
+Controller：`StaffMemberController`
+
+基础路径：`/admin/staff-members`
+
+Swagger：`@Api(tags = "员工相关接口")`
+
+### 6.1 分页查询员工列表
+
+```http
+GET /admin/staff-members
+```
+
+查询参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| page | Integer | 否 | 页码 |
+| pageSize | Integer | 否 | 每页条数 |
+| name | String | 否 | 员工姓名 |
+| phone | String | 否 | 手机号 |
+| status | Integer | 否 | 状态：0停用，1启用 |
+
+请求示例：
+
+```http
+GET /admin/staff-members?page=1&pageSize=10&name=张&status=1
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| total | Long | 总记录数 |
+| records | Array<StaffMemberVO> | 员工列表 |
+
+`StaffMemberVO` 字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 员工ID |
+| name | String | 员工姓名 |
+| phone | String | 手机号 |
+| gender | Integer | 性别：1男，2女 |
+| genderName | String | 性别名称 |
+| position | String | 职位 |
+| status | Integer | 状态：0停用，1启用 |
+| statusName | String | 状态名称 |
+| remark | String | 备注 |
+| createTime | DateTime | 创建时间 |
+| updateTime | DateTime | 更新时间 |
+
+### 6.2 查询员工详情
+
+```http
+GET /admin/staff-members/{id}
+```
+
+返回字段：同 `StaffMemberVO`。
+
+### 6.3 新增员工
+
+```http
+POST /admin/staff-members
+```
+
+请求参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| name | String | 是 | 员工姓名 |
+| phone | String | 否 | 手机号 |
+| gender | Integer | 否 | 性别：1男，2女 |
+| position | String | 否 | 职位 |
+| status | Integer | 是 | 状态：0停用，1启用 |
+| remark | String | 否 | 备注 |
+
+请求示例：
+
+```json
+{
+  "name": "李美容师",
+  "phone": "13800000001",
+  "gender": 2,
+  "position": "美容师",
+  "status": 1,
+  "remark": "擅长面部护理"
+}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 新增员工ID |
+
+### 6.4 修改员工
+
+```http
+PUT /admin/staff-members/{id}
+```
+
+请求参数：同新增员工。
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否修改成功 |
+
+### 6.5 启用或停用员工
+
+```http
+PATCH /admin/staff-members/{id}/status
+```
+
+请求示例：
+
+```json
+{
+  "status": 0
+}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否修改成功 |
+
+### 6.6 删除员工
+
+```http
+DELETE /admin/staff-members/{id}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否删除成功 |
+
+## 7. 客户接口
+
+Controller：`CustomerProfileController`
+
+基础路径：`/admin/customers`
+
+Swagger：`@Api(tags = "客户相关接口")`
+
+### 7.1 分页查询客户列表
+
+```http
+GET /admin/customers
+```
+
+查询参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| page | Integer | 否 | 页码 |
+| pageSize | Integer | 否 | 每页条数 |
+| name | String | 否 | 客户姓名 |
+| phone | String | 否 | 手机号 |
+| level | String | 否 | 客户等级：普通/银卡/金卡/VIP |
+| source | String | 否 | 客户来源 |
+
+请求示例：
+
+```http
+GET /admin/customers?page=1&pageSize=10&level=VIP&source=小红书
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| total | Long | 总记录数 |
+| records | Array<CustomerProfileVO> | 客户列表 |
+
+`CustomerProfileVO` 字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 客户ID |
+| name | String | 客户姓名 |
+| phone | String | 手机号 |
+| gender | Integer | 性别：1男，2女 |
+| genderName | String | 性别名称 |
+| birthday | Date | 生日 |
+| level | String | 客户等级 |
+| levelName | String | 客户等级名称 |
+| source | String | 客户来源 |
+| remark | String | 备注 |
+| createTime | DateTime | 创建时间 |
+| updateTime | DateTime | 更新时间 |
+
+### 7.2 查询客户详情
+
+```http
+GET /admin/customers/{id}
+```
+
+返回字段：同 `CustomerProfileVO`。
+
+### 7.3 新增客户
+
+```http
+POST /admin/customers
+```
+
+请求参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| name | String | 是 | 客户姓名 |
+| phone | String | 否 | 手机号 |
+| gender | Integer | 否 | 性别：1男，2女 |
+| birthday | Date | 否 | 生日 |
+| level | String | 否 | 客户等级 |
+| source | String | 否 | 客户来源 |
+| remark | String | 否 | 备注 |
+
+请求示例：
+
+```json
+{
+  "name": "王女士",
+  "phone": "13900000001",
+  "gender": 2,
+  "birthday": "1996-05-20",
+  "level": "VIP",
+  "source": "小红书",
+  "remark": "关注补水修护"
+}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 新增客户ID |
+
+### 7.4 修改客户
+
+```http
+PUT /admin/customers/{id}
+```
+
+请求参数：同新增客户。
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否修改成功 |
+
+### 7.5 删除客户
+
+```http
+DELETE /admin/customers/{id}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否删除成功 |
+
+## 8. 服务项目接口
+
+Controller：`ServiceProjectController`
+
+基础路径：`/admin/service-projects`
+
+Swagger：`@Api(tags = "服务项目相关接口")`
+
+### 8.1 分页查询服务项目
+
+```http
+GET /admin/service-projects
+```
+
+查询参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| page | Integer | 否 | 页码 |
+| pageSize | Integer | 否 | 每页条数 |
+| name | String | 否 | 项目名称 |
+| category | String | 否 | 项目分类 |
+| status | Integer | 否 | 状态：0下架，1上架 |
+
+请求示例：
+
+```http
+GET /admin/service-projects?page=1&pageSize=10&category=面部护理&status=1
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| total | Long | 总记录数 |
+| records | Array<ServiceProjectVO> | 服务项目列表 |
+
+`ServiceProjectVO` 字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 项目ID |
+| name | String | 项目名称 |
+| category | String | 项目分类 |
+| price | BigDecimal | 标准价格 |
+| durationMinutes | Integer | 服务时长，单位分钟 |
+| description | String | 项目说明 |
+| status | Integer | 状态：0下架，1上架 |
+| statusName | String | 状态名称 |
+| createTime | DateTime | 创建时间 |
+| updateTime | DateTime | 更新时间 |
+
+### 8.2 查询服务项目详情
+
+```http
+GET /admin/service-projects/{id}
+```
+
+返回字段：同 `ServiceProjectVO`。
+
+### 8.3 新增服务项目
+
+```http
+POST /admin/service-projects
+```
+
+请求参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| name | String | 是 | 项目名称 |
+| category | String | 否 | 项目分类 |
+| price | BigDecimal | 是 | 标准价格 |
+| durationMinutes | Integer | 否 | 服务时长，单位分钟 |
+| description | String | 否 | 项目说明 |
+| status | Integer | 是 | 状态：0下架，1上架 |
+
+请求示例：
+
+```json
+{
+  "name": "深层补水护理",
+  "category": "面部护理",
+  "price": 198.00,
+  "durationMinutes": 90,
+  "description": "适合干燥缺水肌肤",
+  "status": 1
+}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 新增项目ID |
+
+### 8.4 修改服务项目
+
+```http
+PUT /admin/service-projects/{id}
+```
+
+请求参数：同新增服务项目。
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否修改成功 |
+
+### 8.5 上架或下架服务项目
+
+```http
+PATCH /admin/service-projects/{id}/status
+```
+
+请求示例：
+
+```json
+{
+  "status": 1
+}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否修改成功 |
+
+### 8.6 删除服务项目
+
+```http
+DELETE /admin/service-projects/{id}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否删除成功 |
+
+## 9. 预约接口
+
+Controller：`AppointmentController`
+
+基础路径：`/admin/appointments`
+
+Swagger：`@Api(tags = "预约相关接口")`
+
+### 9.1 分页查询预约
+
+```http
+GET /admin/appointments
+```
+
+查询参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| page | Integer | 否 | 页码 |
+| pageSize | Integer | 否 | 每页条数 |
+| customerName | String | 否 | 客户姓名 |
+| staffName | String | 否 | 员工姓名 |
+| status | Integer | 否 | 预约状态：0待确认，1已确认，2已完成，3已取消 |
+| beginTime | DateTime | 否 | 开始时间 |
+| endTime | DateTime | 否 | 结束时间 |
+
+请求示例：
+
+```http
+GET /admin/appointments?page=1&pageSize=10&status=1&beginTime=2026-07-01 00:00:00&endTime=2026-07-31 23:59:59
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| total | Long | 总记录数 |
+| records | Array<AppointmentVO> | 预约列表 |
+
+`AppointmentVO` 字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 预约ID |
+| appointmentNo | String | 预约编号 |
+| customerId | Long | 客户ID |
+| customerName | String | 客户姓名 |
+| customerPhone | String | 客户手机号 |
+| staffId | Long | 主服务员工ID |
+| staffName | String | 主服务员工姓名 |
+| appointmentTime | DateTime | 预约时间 |
+| status | Integer | 状态 |
+| statusName | String | 状态名称 |
+| totalDurationMinutes | Integer | 预计总时长 |
+| remark | String | 备注 |
+| items | Array<AppointmentItemVO> | 预约项目明细 |
+| createTime | DateTime | 创建时间 |
+| updateTime | DateTime | 更新时间 |
+
+### 9.2 查询预约详情
+
+```http
+GET /admin/appointments/{id}
+```
+
+返回字段：同 `AppointmentVO`。
+
+### 9.3 新增预约
+
+```http
+POST /admin/appointments
+```
+
+请求参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| appointmentNo | String | 否 | 预约编号，不传由服务端生成 |
+| customerId | Long | 是 | 客户ID |
+| staffId | Long | 否 | 主服务员工ID |
+| appointmentTime | DateTime | 是 | 预约时间 |
+| status | Integer | 是 | 预约状态 |
+| totalDurationMinutes | Integer | 否 | 预计总时长 |
+| remark | String | 否 | 备注 |
+| items | Array<AppointmentItemDTO> | 是 | 预约项目明细 |
+
+`AppointmentItemDTO` 字段：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| serviceProjectId | Long | 是 | 服务项目ID |
+| staffId | Long | 否 | 指定服务员工ID |
+| serviceName | String | 否 | 项目快照名称 |
+| price | BigDecimal | 否 | 项目快照价格 |
+| durationMinutes | Integer | 否 | 项目快照时长 |
+| sortNo | Integer | 否 | 排序 |
+
+请求示例：
+
+```json
+{
+  "customerId": 1001,
+  "staffId": 1002,
+  "appointmentTime": "2026-07-10 14:00:00",
+  "status": 0,
+  "totalDurationMinutes": 90,
+  "remark": "客户希望安排补水护理",
+  "items": [
+    {
+      "serviceProjectId": 1001,
+      "staffId": 1002,
+      "serviceName": "深层补水护理",
+      "price": 198.00,
+      "durationMinutes": 90,
+      "sortNo": 1
+    }
+  ]
+}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 新增预约ID |
+
+### 9.4 修改预约
+
+```http
+PUT /admin/appointments/{id}
+```
+
+请求参数：同新增预约。
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否修改成功 |
+
+### 9.5 确认预约
+
+```http
+PATCH /admin/appointments/{id}/confirm
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否操作成功 |
+
+### 9.6 完成预约
+
+```http
+PATCH /admin/appointments/{id}/complete
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否操作成功 |
+
+### 9.7 取消预约
+
+```http
+PATCH /admin/appointments/{id}/cancel
+```
+
+请求示例：
+
+```json
+{
+  "remark": "客户临时取消"
+}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否操作成功 |
+
+### 9.8 删除预约
+
+```http
+DELETE /admin/appointments/{id}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否删除成功 |
+
+## 10. 预约项目接口
+
+Controller：`AppointmentItemController`
+
+基础路径：`/admin/appointment-items`
+
+Swagger：`@Api(tags = "预约项目相关接口")`
+
+### 10.1 查询预约项目列表
+
+```http
+GET /admin/appointment-items
+```
+
+查询参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| appointmentId | Long | 否 | 预约ID |
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Array<AppointmentItemVO> | 预约项目列表 |
+
+`AppointmentItemVO` 字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 明细ID |
+| appointmentId | Long | 预约ID |
+| serviceProjectId | Long | 服务项目ID |
+| staffId | Long | 服务员工ID |
+| staffName | String | 服务员工姓名 |
+| serviceName | String | 项目快照名称 |
+| price | BigDecimal | 项目快照价格 |
+| durationMinutes | Integer | 项目快照时长 |
+| sortNo | Integer | 排序 |
+| createTime | DateTime | 创建时间 |
+
+### 10.2 新增预约项目
+
+```http
+POST /admin/appointment-items
+```
+
+请求参数：同 `AppointmentItemDTO`。
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 新增明细ID |
+
+### 10.3 修改预约项目
+
+```http
+PUT /admin/appointment-items/{id}
+```
+
+请求参数：同 `AppointmentItemDTO`。
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否修改成功 |
+
+### 10.4 删除预约项目
+
+```http
+DELETE /admin/appointment-items/{id}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否删除成功 |
+
+## 11. 服务订单接口
+
+Controller：`ServiceOrderController`
+
+基础路径：`/admin/service-orders`
+
+Swagger：`@Api(tags = "订单相关接口")`
+
+### 11.1 分页查询订单
+
+```http
+GET /admin/service-orders
+```
+
+查询参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| page | Integer | 否 | 页码 |
+| pageSize | Integer | 否 | 每页条数 |
+| orderNo | String | 否 | 订单编号 |
+| customerName | String | 否 | 客户姓名 |
+| orderType | String | 否 | 订单类型 |
+| payStatus | Integer | 否 | 支付状态 |
+| debtStatus | Integer | 否 | 欠款状态 |
+| orderStatus | Integer | 否 | 订单状态 |
+| beginTime | DateTime | 否 | 开始时间 |
+| endTime | DateTime | 否 | 结束时间 |
+
+请求示例：
+
+```http
+GET /admin/service-orders?page=1&pageSize=10&payStatus=1&orderStatus=0
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| total | Long | 总记录数 |
+| records | Array<ServiceOrderVO> | 订单列表 |
+
+`ServiceOrderVO` 字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 订单ID |
+| orderNo | String | 订单编号 |
+| appointmentId | Long | 关联预约ID |
+| customerId | Long | 客户ID |
+| customerName | String | 客户姓名 |
+| customerPhone | String | 客户手机号 |
+| orderType | String | 订单类型 |
+| orderTypeName | String | 订单类型名称 |
+| originalAmount | BigDecimal | 原价金额 |
+| discountAmount | BigDecimal | 优惠金额 |
+| receivableAmount | BigDecimal | 应收金额 |
+| paidAmount | BigDecimal | 已收金额 |
+| debtAmount | BigDecimal | 欠款金额 |
+| debtStatus | Integer | 欠款状态 |
+| debtStatusName | String | 欠款状态名称 |
+| payStatus | Integer | 支付状态 |
+| payStatusName | String | 支付状态名称 |
+| orderStatus | Integer | 订单状态 |
+| orderStatusName | String | 订单状态名称 |
+| remark | String | 备注 |
+| items | Array<ServiceOrderItemVO> | 订单项目明细 |
+| payments | Array<PaymentRecordVO> | 收款流水 |
+| createTime | DateTime | 创建时间 |
+| updateTime | DateTime | 更新时间 |
+
+### 11.2 查询订单详情
+
+```http
+GET /admin/service-orders/{id}
+```
+
+返回字段：同 `ServiceOrderVO`。
+
+### 11.3 新增订单
+
+```http
+POST /admin/service-orders
+```
+
+请求参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| orderNo | String | 否 | 订单编号，不传由服务端生成 |
+| appointmentId | Long | 否 | 关联预约ID |
+| customerId | Long | 是 | 客户ID |
+| orderType | String | 是 | 订单类型 |
+| originalAmount | BigDecimal | 是 | 原价金额 |
+| discountAmount | BigDecimal | 否 | 优惠金额 |
+| receivableAmount | BigDecimal | 是 | 应收金额 |
+| paidAmount | BigDecimal | 否 | 已收金额 |
+| debtAmount | BigDecimal | 否 | 欠款金额 |
+| debtStatus | Integer | 否 | 欠款状态 |
+| payStatus | Integer | 否 | 支付状态 |
+| orderStatus | Integer | 否 | 订单状态 |
+| remark | String | 否 | 备注 |
+| items | Array<ServiceOrderItemDTO> | 是 | 订单项目明细 |
+
+`ServiceOrderItemDTO` 字段：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| serviceProjectId | Long | 是 | 服务项目ID |
+| serviceName | String | 否 | 项目快照名称 |
+| unitPrice | BigDecimal | 是 | 单价 |
+| quantity | BigDecimal | 是 | 数量 |
+| discountAmount | BigDecimal | 否 | 明细优惠金额 |
+| actualAmount | BigDecimal | 是 | 明细应收金额 |
+| staffId | Long | 否 | 服务员工ID |
+| remark | String | 否 | 备注 |
+
+请求示例：
+
+```json
+{
+  "appointmentId": 1001,
+  "customerId": 1001,
+  "orderType": "service",
+  "originalAmount": 198.00,
+  "discountAmount": 20.00,
+  "receivableAmount": 178.00,
+  "paidAmount": 178.00,
+  "debtAmount": 0.00,
+  "debtStatus": 0,
+  "payStatus": 2,
+  "orderStatus": 1,
+  "remark": "服务订单",
+  "items": [
+    {
+      "serviceProjectId": 1001,
+      "serviceName": "深层补水护理",
+      "unitPrice": 198.00,
+      "quantity": 1,
+      "discountAmount": 20.00,
+      "actualAmount": 178.00,
+      "staffId": 1002,
+      "remark": "项目明细"
+    }
+  ]
+}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 新增订单ID |
+
+### 11.4 从预约生成订单
+
+```http
+POST /admin/service-orders/from-appointment/{appointmentId}
+```
+
+路径参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| appointmentId | Long | 是 | 预约ID |
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 生成的订单ID |
+
+### 11.5 修改订单
+
+```http
+PUT /admin/service-orders/{id}
+```
+
+请求参数：同新增订单。
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否修改成功 |
+
+### 11.6 取消订单
+
+```http
+PATCH /admin/service-orders/{id}/cancel
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否操作成功 |
+
+### 11.7 完成订单
+
+```http
+PATCH /admin/service-orders/{id}/finish
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否操作成功 |
+
+### 11.8 删除订单
+
+```http
+DELETE /admin/service-orders/{id}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否删除成功 |
+
+## 12. 订单项目接口
+
+Controller：`ServiceOrderItemController`
+
+基础路径：`/admin/service-order-items`
+
+Swagger：`@Api(tags = "订单项目相关接口")`
+
+### 12.1 查询订单项目列表
+
+```http
+GET /admin/service-order-items
+```
+
+查询参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| orderId | Long | 否 | 订单ID |
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Array<ServiceOrderItemVO> | 订单项目列表 |
+
+`ServiceOrderItemVO` 字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 明细ID |
+| orderId | Long | 订单ID |
+| serviceProjectId | Long | 服务项目ID |
+| serviceName | String | 项目快照名称 |
+| unitPrice | BigDecimal | 单价 |
+| quantity | BigDecimal | 数量 |
+| discountAmount | BigDecimal | 明细优惠金额 |
+| actualAmount | BigDecimal | 明细应收金额 |
+| staffId | Long | 服务员工ID |
+| staffName | String | 服务员工姓名 |
+| remark | String | 备注 |
+| createTime | DateTime | 创建时间 |
+
+### 12.2 新增订单项目
+
+```http
+POST /admin/service-order-items
+```
+
+请求参数：同 `ServiceOrderItemDTO`。
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 新增明细ID |
+
+### 12.3 修改订单项目
+
+```http
+PUT /admin/service-order-items/{id}
+```
+
+请求参数：同 `ServiceOrderItemDTO`。
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否修改成功 |
+
+### 12.4 删除订单项目
+
+```http
+DELETE /admin/service-order-items/{id}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否删除成功 |
+
+## 13. 收款流水接口
+
+Controller：`PaymentRecordController`
+
+基础路径：`/admin/payment-records`
+
+Swagger：`@Api(tags = "收款流水相关接口")`
+
+### 13.1 分页查询收款流水
+
+```http
+GET /admin/payment-records
+```
+
+查询参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| page | Integer | 否 | 页码 |
+| pageSize | Integer | 否 | 每页条数 |
+| orderId | Long | 否 | 订单ID |
+| paymentMethod | String | 否 | 支付方式 |
+| payStatus | Integer | 否 | 收款状态 |
+| beginTime | DateTime | 否 | 开始时间 |
+| endTime | DateTime | 否 | 结束时间 |
+
+请求示例：
+
+```http
+GET /admin/payment-records?page=1&pageSize=10&paymentMethod=wechat&payStatus=1
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| total | Long | 总记录数 |
+| records | Array<PaymentRecordVO> | 收款流水列表 |
+
+`PaymentRecordVO` 字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 收款流水ID |
+| orderId | Long | 订单ID |
+| paymentNo | String | 收款流水号 |
+| paymentMethod | String | 支付方式 |
+| paymentMethodName | String | 支付方式名称 |
+| payAmount | BigDecimal | 收款金额 |
+| payStatus | Integer | 收款状态 |
+| payStatusName | String | 收款状态名称 |
+| payTime | DateTime | 收款时间 |
+| operatorId | Long | 操作人ID |
+| operatorName | String | 操作人姓名 |
+| remark | String | 备注 |
+| createTime | DateTime | 创建时间 |
+
+### 13.2 查询收款详情
+
+```http
+GET /admin/payment-records/{id}
+```
+
+返回字段：同 `PaymentRecordVO`。
+
+### 13.3 新增收款记录
+
+```http
+POST /admin/payment-records
+```
+
+请求参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| orderId | Long | 是 | 订单ID |
+| paymentNo | String | 否 | 收款流水号，不传由服务端生成 |
+| paymentMethod | String | 是 | 支付方式 |
+| payAmount | BigDecimal | 是 | 收款金额 |
+| payStatus | Integer | 是 | 收款状态 |
+| payTime | DateTime | 否 | 收款时间 |
+| operatorId | Long | 否 | 操作人ID |
+| remark | String | 否 | 备注 |
+
+请求示例：
+
+```json
+{
+  "orderId": 1001,
+  "paymentMethod": "wechat",
+  "payAmount": 178.00,
+  "payStatus": 1,
+  "payTime": "2026-07-04 16:30:00",
+  "operatorId": 1001,
+  "remark": "微信收款"
+}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 新增收款流水ID |
+
+### 13.4 作废收款记录
+
+```http
+PATCH /admin/payment-records/{id}/void
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否操作成功 |
+
+## 14. 库存物品接口
+
+Controller：`InventorySkuController`
+
+基础路径：`/admin/inventory-skus`
+
+Swagger：`@Api(tags = "库存物品相关接口")`
+
+### 14.1 分页查询库存物品
+
+```http
+GET /admin/inventory-skus
+```
+
+查询参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| page | Integer | 否 | 页码 |
+| pageSize | Integer | 否 | 每页条数 |
+| name | String | 否 | 库存名称 |
+| category | String | 否 | 分类 |
+| status | Integer | 否 | 状态：0停用，1启用 |
+| lowStockOnly | Boolean | 否 | 是否只查低于安全库存的物品 |
+
+请求示例：
+
+```http
+GET /admin/inventory-skus?page=1&pageSize=10&category=护理耗材&lowStockOnly=true
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| total | Long | 总记录数 |
+| records | Array<InventorySkuVO> | 库存物品列表 |
+
+`InventorySkuVO` 字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 库存物品ID |
+| name | String | 库存名称 |
+| category | String | 分类 |
+| unit | String | 单位 |
+| quantity | BigDecimal | 当前库存 |
+| safetyStock | BigDecimal | 安全库存 |
+| belowSafetyStock | Boolean | 是否低于安全库存 |
+| costPrice | BigDecimal | 成本价 |
+| supplier | String | 供应商 |
+| status | Integer | 状态 |
+| statusName | String | 状态名称 |
+| remark | String | 备注 |
+| createTime | DateTime | 创建时间 |
+| updateTime | DateTime | 更新时间 |
+
+### 14.2 查询库存物品详情
+
+```http
+GET /admin/inventory-skus/{id}
+```
+
+返回字段：同 `InventorySkuVO`。
+
+### 14.3 新增库存物品
+
+```http
+POST /admin/inventory-skus
+```
+
+请求参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| name | String | 是 | 库存名称 |
+| category | String | 否 | 分类 |
+| unit | String | 否 | 单位 |
+| quantity | BigDecimal | 是 | 当前库存 |
+| safetyStock | BigDecimal | 否 | 安全库存 |
+| costPrice | BigDecimal | 否 | 成本价 |
+| supplier | String | 否 | 供应商 |
+| status | Integer | 是 | 状态：0停用，1启用 |
+| remark | String | 否 | 备注 |
+
+请求示例：
+
+```json
+{
+  "name": "补水面膜",
+  "category": "护理耗材",
+  "unit": "盒",
+  "quantity": 36.00,
+  "safetyStock": 10.00,
+  "costPrice": 28.00,
+  "supplier": "美业供应商A",
+  "status": 1,
+  "remark": "常用耗材"
+}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 新增库存物品ID |
+
+### 14.4 修改库存物品
+
+```http
+PUT /admin/inventory-skus/{id}
+```
+
+请求参数：同新增库存物品。
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否修改成功 |
+
+### 14.5 启用或停用库存物品
+
+```http
+PATCH /admin/inventory-skus/{id}/status
+```
+
+请求示例：
+
+```json
+{
+  "status": 1
+}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否修改成功 |
+
+### 14.6 删除库存物品
+
+```http
+DELETE /admin/inventory-skus/{id}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| data | Boolean | 是否删除成功 |
+
+## 15. 库存流水接口
+
+Controller：`InventoryStockLogController`
+
+基础路径：`/admin/inventory-stock-logs`
+
+Swagger：`@Api(tags = "库存流水相关接口")`
+
+### 15.1 分页查询库存流水
+
+```http
+GET /admin/inventory-stock-logs
+```
+
+查询参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| page | Integer | 否 | 页码 |
+| pageSize | Integer | 否 | 每页条数 |
+| inventoryId | Long | 否 | 库存物品ID |
+| changeType | String | 否 | 变动类型 |
+| relatedOrderId | Long | 否 | 关联订单ID |
+| beginTime | DateTime | 否 | 开始时间 |
+| endTime | DateTime | 否 | 结束时间 |
+
+请求示例：
+
+```http
+GET /admin/inventory-stock-logs?page=1&pageSize=10&changeType=stock_in
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| total | Long | 总记录数 |
+| records | Array<InventoryStockLogVO> | 库存流水列表 |
+
+`InventoryStockLogVO` 字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 库存流水ID |
+| inventoryId | Long | 库存物品ID |
+| inventoryName | String | 库存名称 |
+| changeType | String | 变动类型 |
+| changeTypeName | String | 变动类型名称 |
+| changeQuantity | BigDecimal | 变动数量 |
+| beforeQuantity | BigDecimal | 变动前库存 |
+| afterQuantity | BigDecimal | 变动后库存 |
+| relatedOrderId | Long | 关联订单ID |
+| operatorId | Long | 操作人ID |
+| operatorName | String | 操作人姓名 |
+| remark | String | 备注 |
+| createTime | DateTime | 创建时间 |
+
+### 15.2 查询库存流水详情
+
+```http
+GET /admin/inventory-stock-logs/{id}
+```
+
+返回字段：同 `InventoryStockLogVO`。
+
+### 15.3 新增库存流水
+
+```http
+POST /admin/inventory-stock-logs
+```
+
+请求参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| inventoryId | Long | 是 | 库存物品ID |
+| changeType | String | 是 | 变动类型：stock_in/stock_out/check/loss/return |
+| changeQuantity | BigDecimal | 是 | 变动数量 |
+| relatedOrderId | Long | 否 | 关联订单ID |
+| operatorId | Long | 否 | 操作人ID |
+| remark | String | 否 | 备注 |
+
+请求示例：
+
+```json
+{
+  "inventoryId": 1001,
+  "changeType": "stock_in",
+  "changeQuantity": 20.00,
+  "relatedOrderId": null,
+  "operatorId": 1001,
+  "remark": "采购入库"
+}
+```
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 新增库存流水ID |
+
+### 15.4 入库
+
+```http
+POST /admin/inventory-stock-logs/inbound
+```
+
+请求参数：同新增库存流水，`changeType` 固定为 `stock_in`。
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 新增库存流水ID |
+
+### 15.5 出库
+
+```http
+POST /admin/inventory-stock-logs/outbound
+```
+
+请求参数：同新增库存流水，`changeType` 固定为 `stock_out`。
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 新增库存流水ID |
+
+### 15.6 盘点调整
+
+```http
+POST /admin/inventory-stock-logs/adjust
+```
+
+请求参数：同新增库存流水，`changeType` 固定为 `check`。
+
+返回字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 新增库存流水ID |
+
+## 16. 业务规则
+
+### 16.1 登录
+
+- 登录参数必须使用 JSON 请求体。
+- 密码字段不返回前端。
+- Token 放在统一返回对象 `data.token`。
+- 后续请求头名称按配置使用 `token`。
+
+### 16.2 分页
+
+- 分页查询统一返回 `Result<PageResult>`。
+- `PageResult.total` 为总记录数。
+- `PageResult.records` 为当前页 VO 列表。
+
+### 16.3 保存和修改
+
+- Controller 入参使用 DTO，不直接接收 Entity。
+- Controller 出参使用 VO，不直接返回 Entity。
+- 新增成功建议返回新增 ID。
+- 修改、删除、状态流转建议返回 Boolean。
+
+### 16.4 事务
+
+以下操作必须加事务：
+
+- 新增预约并保存预约项目明细。
+- 从预约生成订单。
+- 新增订单并保存订单项目明细。
+- 收款后同步更新订单支付金额、支付状态、欠款金额。
+- 库存变动后同步更新库存数量并写入库存流水。
+
+### 16.5 状态流转
+
+- 预约状态不能随意改数字，应限制为：待确认 -> 已确认 -> 已完成，或取消。
+- 已取消预约不能再确认或完成。
+- 已取消订单不能再收款或完成。
+- 已退款订单不能重复退款。
+- 出库数量不能超过当前库存。

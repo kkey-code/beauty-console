@@ -1,0 +1,4 @@
+# Project exclude paths
+/store-common/target/
+/store-pojo/target/
+/store-server/target/
