@@ -44,7 +44,7 @@ public class ServiceOrderItemController {
 
     @GetMapping
     @ApiOperation("订单项目列表")
-    public Result<List<ServiceOrderItemVO>> list(@RequestParam Long orderId) {
+    public Result<List<ServiceOrderItemVO>> list(@RequestParam("orderId") Long orderId) {
         LambdaQueryWrapper<ServiceOrderItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ServiceOrderItem::getOrderId, orderId);
 
@@ -68,7 +68,7 @@ public class ServiceOrderItemController {
 
     @PutMapping("/{id}")
     @ApiOperation("修改订单项目")
-    public Result<Boolean> update(@PathVariable Long id, @Valid @RequestBody ServiceOrderItemDTO dto) {
+    public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody ServiceOrderItemDTO dto) {
         ServiceOrderItem serviceOrderItem = new ServiceOrderItem();
         BeanUtils.copyProperties(dto, serviceOrderItem);
         serviceOrderItem.setId(id);
@@ -82,7 +82,7 @@ public class ServiceOrderItemController {
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除订单项目")
-    public Result<Boolean> delete(@PathVariable Long id) {
+    public Result<Boolean> delete(@PathVariable("id") Long id) {
         boolean removed = serviceOrderItemService.removeById(id);
         if (!removed) {
             return Result.error("删除失败");

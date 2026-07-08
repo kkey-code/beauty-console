@@ -75,7 +75,7 @@ public class InventoryStockLogController {
 
     @GetMapping("/{id}")
     @ApiOperation("查询库存流水")
-    public Result<InventoryStockLogVO> get(@PathVariable Long id) {
+    public Result<InventoryStockLogVO> get(@PathVariable("id") Long id) {
         InventoryStockLog inventoryStockLog = inventoryStockLogService.getById(id);
         if (inventoryStockLog == null) {
             throw new BusinessException("库存流水不存在");

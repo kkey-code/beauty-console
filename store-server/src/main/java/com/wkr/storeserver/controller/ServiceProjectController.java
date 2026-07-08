@@ -70,7 +70,7 @@ public class ServiceProjectController {
 
     @GetMapping("/{id}")
     @ApiOperation("获取服务项目详情")
-    public Result<ServiceProjectVO> get(@PathVariable Long id) {
+    public Result<ServiceProjectVO> get(@PathVariable("id") Long id) {
         ServiceProject serviceProject = getExistingServiceProject(id);
         return Result.success(toVO(serviceProject));
     }
@@ -92,7 +92,7 @@ public class ServiceProjectController {
 
     @PutMapping("/{id}")
     @ApiOperation("修改服务项目")
-    public Result<String> update(@PathVariable Long id, @Valid @RequestBody ServiceProjectDTO dto) {
+    public Result<String> update(@PathVariable("id") Long id, @Valid @RequestBody ServiceProjectDTO dto) {
         ServiceProject serviceProject = getExistingServiceProject(id);
         BeanUtils.copyProperties(dto, serviceProject);
         serviceProject.setId(id);
@@ -107,7 +107,7 @@ public class ServiceProjectController {
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除服务项目")
-    public Result<String> delete(@PathVariable Long id) {
+    public Result<String> delete(@PathVariable("id") Long id) {
         getExistingServiceProject(id);
 
         boolean removed = serviceProjectService.removeById(id);
@@ -119,7 +119,7 @@ public class ServiceProjectController {
 
     @PatchMapping("/{id}/status")
     @ApiOperation("修改服务项目状态")
-    public Result<String> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
+    public Result<String> updateStatus(@PathVariable("id") Long id, @RequestParam("status") Integer status) {
         ServiceProject serviceProject = getExistingServiceProject(id);
         serviceProject.setStatus(status);
         serviceProject.setUpdateTime(LocalDateTime.now());

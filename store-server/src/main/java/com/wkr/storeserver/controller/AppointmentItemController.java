@@ -46,7 +46,7 @@ public class AppointmentItemController {
 
     @GetMapping
     @ApiOperation("预约项目列表")
-    public Result<List<AppointmentItemVO>> list(@RequestParam Long appointmentId) {
+    public Result<List<AppointmentItemVO>> list(@RequestParam("appointmentId") Long appointmentId) {
         LambdaQueryWrapper<AppointmentItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(AppointmentItem::getAppointmentId, appointmentId);
 
@@ -75,7 +75,7 @@ public class AppointmentItemController {
 
     @PutMapping("/{id}")
     @ApiOperation("修改预约项目明细")
-    public Result<Boolean> update(@PathVariable Long id, @Valid @RequestBody AppointmentItemDTO appointmentItemDTO) {
+    public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody AppointmentItemDTO appointmentItemDTO) {
         AppointmentItem appointmentItem = new AppointmentItem();
         BeanUtils.copyProperties(appointmentItemDTO, appointmentItem);
         appointmentItem.setId(id);
@@ -86,7 +86,7 @@ public class AppointmentItemController {
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除预约项目")
-    public Result<Boolean> delete(@PathVariable Long id) {
+    public Result<Boolean> delete(@PathVariable("id") Long id) {
         boolean removed = appointmentItemService.removeById(id);
         return Result.success(removed);
     }

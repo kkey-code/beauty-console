@@ -52,7 +52,7 @@ public class AppointmentController {
 
     @GetMapping("/{id}")
     @ApiOperation("预约详情")
-    public Result<AppointmentVO> getByID(@PathVariable Long id) {
+    public Result<AppointmentVO> getByID(@PathVariable("id") Long id) {
         return Result.success(appointmentService.getByID(id));
     }
 
@@ -85,7 +85,7 @@ public class AppointmentController {
 
     @PutMapping("/{id}")
     @ApiOperation("修改预约")
-    public Result<Boolean> update(@PathVariable Long id, @Valid @RequestBody AppointmentDTO dto) {
+    public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody AppointmentDTO dto) {
         Appointment appointment = new Appointment();
         BeanUtils.copyProperties(dto, appointment);
         appointment.setId(id);
@@ -95,7 +95,7 @@ public class AppointmentController {
 
     @PatchMapping("/{id}/confirm")
     @ApiOperation("确认预约")
-    public Result<Boolean> confirm(@PathVariable Long id) {
+    public Result<Boolean> confirm(@PathVariable("id") Long id) {
         Appointment appointment = new Appointment();
         appointment.setId(id);
         appointment.setStatus(AppointmentStatusEnum.CONFIRMED.getCode());
@@ -106,7 +106,7 @@ public class AppointmentController {
 
     @PatchMapping("/{id}/cancel")
     @ApiOperation("取消预约")
-    public Result<Boolean> cancel(@PathVariable Long id) {
+    public Result<Boolean> cancel(@PathVariable("id") Long id) {
         Appointment appointment = new Appointment();
         appointment.setId(id);
         appointment.setStatus(AppointmentStatusEnum.CANCELED.getCode());
@@ -117,7 +117,7 @@ public class AppointmentController {
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除预约")
-    public Result<Boolean> delete(@PathVariable Long id) {
+    public Result<Boolean> delete(@PathVariable("id") Long id) {
         return Result.success(appointmentService.removeById(id));
     }
 }

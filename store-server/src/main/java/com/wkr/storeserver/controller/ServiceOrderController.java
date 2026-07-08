@@ -110,7 +110,7 @@ public class ServiceOrderController {
 
     @GetMapping("/{id}")
     @ApiOperation("根据订单 id 查询订单")
-    public Result<ServiceOrderVO> getById(@PathVariable Long id) {
+    public Result<ServiceOrderVO> getById(@PathVariable("id") Long id) {
         ServiceOrder serviceOrder = getExistingOrder(id);
         return Result.success(toVO(serviceOrder, true));
     }
@@ -140,7 +140,7 @@ public class ServiceOrderController {
     @PostMapping("/from-appointment/{appointmentId}")
     @ApiOperation("从预约生成订单")
     @Transactional
-    public Result<Long> createFromAppointment(@PathVariable Long appointmentId) {
+    public Result<Long> createFromAppointment(@PathVariable("appointmentId") Long appointmentId) {
         Appointment appointment = appointmentService.getById(appointmentId);
         if (appointment == null) {
             throw new BusinessException("预约不存在");
@@ -175,7 +175,7 @@ public class ServiceOrderController {
     @PutMapping("/{id}")
     @ApiOperation("修改订单")
     @Transactional
-    public Result<Boolean> update(@PathVariable Long id, @Valid @RequestBody ServiceOrderDTO serviceOrderDTO) {
+    public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody ServiceOrderDTO serviceOrderDTO) {
         getExistingOrder(id);
 
         ServiceOrder serviceOrder = new ServiceOrder();
@@ -202,7 +202,7 @@ public class ServiceOrderController {
 
     @PatchMapping("/{id}/cancel")
     @ApiOperation("取消订单")
-    public Result<Boolean> cancel(@PathVariable Long id) {
+    public Result<Boolean> cancel(@PathVariable("id") Long id) {
         ServiceOrder serviceOrder = getExistingOrder(id);
         OrderStatusEnum.validate(serviceOrder.getOrderStatus());
 
@@ -213,7 +213,7 @@ public class ServiceOrderController {
 
     @PatchMapping("/{id}/finish")
     @ApiOperation("完成订单")
-    public Result<Boolean> finish(@PathVariable Long id) {
+    public Result<Boolean> finish(@PathVariable("id") Long id) {
         ServiceOrder serviceOrder = getExistingOrder(id);
         OrderStatusEnum.validate(serviceOrder.getOrderStatus());
 
@@ -224,7 +224,7 @@ public class ServiceOrderController {
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除订单")
-    public Result<Boolean> delete(@PathVariable Long id) {
+    public Result<Boolean> delete(@PathVariable("id") Long id) {
         ServiceOrder serviceOrder = getExistingOrder(id);
         OrderStatusEnum.validate(serviceOrder.getOrderStatus());
 

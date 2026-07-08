@@ -58,7 +58,7 @@ public class SysUserController {
 
     @GetMapping("/{id}")
     @ApiOperation("根据用户 id 查询用户")
-    public Result<SysUserVO> getById(@PathVariable Long id) {
+    public Result<SysUserVO> getById(@PathVariable("id") Long id) {
         return Result.success(sysUserService.getByID(id));
     }
 
@@ -80,7 +80,7 @@ public class SysUserController {
 
     @PutMapping("/{id}")
     @ApiOperation("修改用户")
-    public Result<?> update(@PathVariable Long id, @Valid @RequestBody SysUserDTO sysUserDTO) {
+    public Result<?> update(@PathVariable("id") Long id, @Valid @RequestBody SysUserDTO sysUserDTO) {
         SysUser sysUser = new SysUser();
         BeanUtils.copyProperties(sysUserDTO, sysUser);
         sysUser.setId(id);
@@ -96,14 +96,14 @@ public class SysUserController {
 
     @PatchMapping("/{id}/status")
     @ApiOperation("修改用户状态")
-    public Result<?> updateStatus(@PathVariable Long id, @Valid @RequestBody SysUserStatusDTO sysUserStatusDTO) {
+    public Result<?> updateStatus(@PathVariable("id") Long id, @Valid @RequestBody SysUserStatusDTO sysUserStatusDTO) {
         sysUserService.updateStatus(id, sysUserStatusDTO.getStatus());
         return Result.success();
     }
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除用户")
-    public Result<?> deleteByid(@PathVariable Long id) {
+    public Result<?> deleteByid(@PathVariable("id") Long id) {
         boolean removed = sysUserService.removeById(id);
         if (!removed) {
             throw new SystemException("删除失败");

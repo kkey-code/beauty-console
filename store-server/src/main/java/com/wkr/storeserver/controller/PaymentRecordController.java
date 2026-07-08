@@ -81,7 +81,7 @@ public class PaymentRecordController {
 
     @GetMapping("/{id}")
     @ApiOperation("收款流水详情")
-    public Result<PaymentRecordVO> get(@PathVariable Long id) {
+    public Result<PaymentRecordVO> get(@PathVariable("id") Long id) {
         PaymentRecord record = paymentRecordService.getById(id);
         if (record == null) {
             throw new BusinessException("收款流水不存在");
@@ -113,7 +113,7 @@ public class PaymentRecordController {
     @PatchMapping("/{id}/void")
     @ApiOperation("作废收款记录")
     @Transactional
-    public Result<Boolean> voidPaymentRecord(@PathVariable Long id) {
+    public Result<Boolean> voidPaymentRecord(@PathVariable("id") Long id) {
         PaymentRecord record = paymentRecordService.getById(id);
         if (record == null) {
             throw new BusinessException("收款流水不存在");

@@ -74,7 +74,7 @@ public class CustomerProfileController {
 
     @GetMapping("/{id}")
     @ApiOperation("查询客户详情")
-    public Result<CustomerProfileVO> get(@PathVariable Long id) {
+    public Result<CustomerProfileVO> get(@PathVariable("id") Long id) {
         CustomerProfile customerProfile = customerProfileService.getById(id);
         if (customerProfile == null) {
             throw new BusinessException("客户不存在");
@@ -101,7 +101,7 @@ public class CustomerProfileController {
 
     @PutMapping("/{id}")
     @ApiOperation("修改客户")
-    public Result<Boolean> update(@PathVariable Long id, @Valid @RequestBody CustomerProfileDTO dto) {
+    public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody CustomerProfileDTO dto) {
         CustomerProfile customerProfile = new CustomerProfile();
         BeanUtils.copyProperties(dto, customerProfile);
         customerProfile.setId(id);
@@ -113,7 +113,7 @@ public class CustomerProfileController {
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除客户")
-    public Result<Boolean> delete(@PathVariable Long id) {
+    public Result<Boolean> delete(@PathVariable("id") Long id) {
         boolean removed = customerProfileService.removeById(id);
         return removed ? Result.success(true) : Result.error("删除客户失败");
     }

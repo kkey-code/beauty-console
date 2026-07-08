@@ -71,7 +71,7 @@ public class InventorySkuController {
 
     @GetMapping("/{id}")
     @ApiOperation("根据 id 查询库存物品")
-    public Result<InventorySkuVO> getById(@PathVariable Long id) {
+    public Result<InventorySkuVO> getById(@PathVariable("id") Long id) {
         InventorySku inventorySku = getExistingInventorySku(id);
         return Result.success(toVO(inventorySku));
     }
@@ -89,7 +89,7 @@ public class InventorySkuController {
 
     @PutMapping("/{id}")
     @ApiOperation("修改库存物品")
-    public Result<Boolean> update(@PathVariable Long id, @Valid @RequestBody InventorySkuDTO dto) {
+    public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody InventorySkuDTO dto) {
         InventorySku inventorySku = getExistingInventorySku(id);
         BeanUtils.copyProperties(dto, inventorySku);
         inventorySku.setId(id);
@@ -100,7 +100,7 @@ public class InventorySkuController {
 
     @PatchMapping("/{id}/status")
     @ApiOperation("修改状态")
-    public Result<?> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
+    public Result<?> updateStatus(@PathVariable("id") Long id, @RequestParam("status") Integer status) {
         InventorySku inventorySku = getExistingInventorySku(id);
         inventorySku.setStatus(status);
         inventorySku.setUpdateTime(LocalDateTime.now());
@@ -111,7 +111,7 @@ public class InventorySkuController {
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除库存物品")
-    public Result<?> delete(@PathVariable Long id) {
+    public Result<?> delete(@PathVariable("id") Long id) {
         getExistingInventorySku(id);
         boolean removed = inventorySkuService.removeById(id);
         return removed ? Result.success() : Result.error("删除失败");

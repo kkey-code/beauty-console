@@ -71,7 +71,7 @@ public class StaffMemberController {
 
     @GetMapping("/{id}")
     @ApiOperation("根据员工 id 查询员工")
-    public Result<StaffMemberVO> getById(@PathVariable Long id) {
+    public Result<StaffMemberVO> getById(@PathVariable("id") Long id) {
         StaffMember staffMember = staffMemberService.getById(id);
         if (staffMember == null) {
             throw new BusinessException("员工不存在");
@@ -96,7 +96,7 @@ public class StaffMemberController {
 
     @PutMapping("/{id}")
     @ApiOperation("修改员工信息")
-    public Result<Boolean> updateStaffMember(@PathVariable Long id, @Valid @RequestBody StaffMemberDTO staffMemberDTO) {
+    public Result<Boolean> updateStaffMember(@PathVariable("id") Long id, @Valid @RequestBody StaffMemberDTO staffMemberDTO) {
         StaffMember staffMember = new StaffMember();
         BeanUtils.copyProperties(staffMemberDTO, staffMember);
         staffMember.setId(id);
@@ -111,7 +111,7 @@ public class StaffMemberController {
 
     @PatchMapping("/{id}/status")
     @ApiOperation("修改员工状态")
-    public Result<Boolean> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
+    public Result<Boolean> updateStatus(@PathVariable("id") Long id, @RequestParam("status") Integer status) {
         StaffMember staffMember = new StaffMember();
         staffMember.setId(id);
         staffMember.setStatus(status);
@@ -126,7 +126,7 @@ public class StaffMemberController {
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除员工")
-    public Result<Boolean> delete(@PathVariable Long id) {
+    public Result<Boolean> delete(@PathVariable("id") Long id) {
         boolean removed = staffMemberService.removeById(id);
         if (!removed) {
             throw new SystemException("删除员工失败");
