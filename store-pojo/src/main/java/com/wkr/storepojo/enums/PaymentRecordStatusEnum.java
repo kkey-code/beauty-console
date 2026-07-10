@@ -1,5 +1,8 @@
 package com.wkr.storepojo.enums;
 
+/**
+ * 收款流水状态枚举，描述正常、退款和作废等流水状态。
+ */
 public enum PaymentRecordStatusEnum {
 
     UNCONFIRMED(0, "未确认"),

@@ -10,6 +10,9 @@ import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
 
+/**
+ * 订单项目明细请求参数，承载新增或修改接口的数据并声明输入校验规则。
+ */
 @Data
 @ApiModel(value = "ServiceOrderItemDTO", description = "订单项目明细参数")
 public class ServiceOrderItemDTO implements Serializable {

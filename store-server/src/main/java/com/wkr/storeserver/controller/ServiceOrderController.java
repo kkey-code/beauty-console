@@ -47,6 +47,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 服务订单接口控制器，负责接收管理端请求、校验参数并调用服务层完成业务处理。
+ */
 @Slf4j
 @RestController
 @RequestMapping("/admin/service-orders")
@@ -214,12 +217,7 @@ public class ServiceOrderController {
     @PatchMapping("/{id}/finish")
     @ApiOperation("完成订单")
     public Result<Boolean> finish(@PathVariable("id") Long id) {
-        ServiceOrder serviceOrder = getExistingOrder(id);
-        OrderStatusEnum.validate(serviceOrder.getOrderStatus());
-
-        serviceOrder.setOrderStatus(OrderStatusEnum.COMPLETED.getCode());
-        serviceOrder.setUpdateTime(LocalDateTime.now());
-        return Result.success(serviceOrderService.updateById(serviceOrder));
+        return Result.success(serviceOrderService.finish(id));
     }
 
     @DeleteMapping("/{id}")

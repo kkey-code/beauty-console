@@ -1,5 +1,8 @@
 package com.wkr.storepojo.enums;
 
+/**
+ * 欠款状态枚举，描述订单未欠款、欠款和结清等状态。
+ */
 public enum DebtStatusEnum {
 
     NONE(0, "无欠款"),

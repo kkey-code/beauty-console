@@ -11,6 +11,9 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * 预约请求参数，承载新增或修改接口的数据并声明输入校验规则。
+ */
 @Data
 @ApiModel(value = "AppointmentDTO", description = "预约保存参数")
 public class AppointmentDTO implements Serializable {

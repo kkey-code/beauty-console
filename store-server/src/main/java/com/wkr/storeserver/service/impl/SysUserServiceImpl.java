@@ -1,4 +1,4 @@
-package com.wkr.storeserver.service.Impl;
+package com.wkr.storeserver.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -12,6 +12,7 @@ import com.wkr.storecommon.util.JwtUtils;
 import com.wkr.storepojo.dto.SysUserLoginDTO;
 import com.wkr.storepojo.dto.SysUserPageQueryDTO;
 import com.wkr.storepojo.entity.SysUser;
+import com.wkr.storepojo.enums.RoleEnum;
 import com.wkr.storepojo.vo.LoginUserVO;
 import com.wkr.storepojo.vo.SysUserVO;
 import com.wkr.storeserver.mapper.SysUserMapper;
@@ -24,6 +25,9 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 系统用户服务实现，封装该业务模块的查询、校验、状态更新和持久化流程。
+ */
 @Service
 public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> implements SysUserService {
 
@@ -57,9 +61,11 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
         Map<String, Object> claims = new HashMap<>();
         claims.put(JwtClaimsConstant.USERNAME, loginUserVO.getUsername());
-        claims.put(JwtClaimsConstant.ROLE, loginUserVO.getRoleId());
         claims.put(JwtClaimsConstant.STATUS, loginUserVO.getStatus());
         claims.put(JwtClaimsConstant.STAFF_ID, loginUserVO.getStaffId());
+        claims.put(JwtClaimsConstant.USER_ID, loginUserVO.getId());
+        claims.put(JwtClaimsConstant.ROLE_ID, loginUserVO.getRoleId());
+        claims.put(JwtClaimsConstant.ROLE_CODE, loginUserVO.getRoleCode());
 
         String token = JwtUtils.createJWT(
                 jwtProperties.getAdminSecretKey(),
@@ -137,9 +143,11 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     }
 
     private void updateLoginState(Long userId, String encodedPassword) {
+        LocalDateTime now = LocalDateTime.now();
         SysUser sysUser = new SysUser();
         sysUser.setId(userId);
-        sysUser.setLastLoginTime(LocalDateTime.now());
+        sysUser.setLastLoginTime(now);
+        sysUser.setUpdateTime(now);
         if (encodedPassword != null) {
             sysUser.setPasswordHash(encodedPassword);
         }
@@ -156,7 +164,8 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         if (sysUserVO == null) {
             return;
         }
-        sysUserVO.setRoleName(roleNameOf(sysUserVO.getRoleId()));
+        sysUserVO.setRoleCode(RoleEnum.codeOf(sysUserVO.getRoleId()));
+        sysUserVO.setRoleName(RoleEnum.labelOf(sysUserVO.getRoleId()));
         sysUserVO.setStatusName(statusNameOf(sysUserVO.getStatus()));
     }
 
@@ -164,23 +173,12 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         if (loginUserVO == null) {
             return;
         }
-        loginUserVO.setRoleName(roleNameOf(loginUserVO.getRoleId()));
-    }
-
-    private String roleNameOf(Integer roleId) {
-        if (roleId == null) {
-            return null;
+        RoleEnum role = RoleEnum.fromCode(loginUserVO.getRoleId());
+        if (role == null) {
+            throw new BusinessException("用户角色无效");
         }
-        if (roleId.equals(1)) {
-            return "管理员";
-        }
-        if (roleId.equals(2)) {
-            return "员工";
-        }
-        if (roleId.equals(0) || roleId.equals(3)) {
-            return "只读";
-        }
-        return "未知";
+        loginUserVO.setRoleCode(role.getRoleCode());
+        loginUserVO.setRoleName(role.getDescription());
     }
 
     private String statusNameOf(Integer status) {

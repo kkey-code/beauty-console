@@ -13,6 +13,9 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * 服务订单请求参数，承载新增或修改接口的数据并声明输入校验规则。
+ */
 @Data
 @ApiModel(value = "ServiceOrderDTO", description = "订单保存参数")
 public class ServiceOrderDTO implements Serializable {

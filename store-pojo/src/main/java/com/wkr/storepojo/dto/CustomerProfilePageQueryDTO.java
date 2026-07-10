@@ -5,6 +5,9 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+/**
+ * 客户档案分页查询参数，封装页码以及该模块支持的筛选条件。
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @ApiModel(value = "CustomerProfilePageQueryDTO", description = "客户档案分页查询参数")

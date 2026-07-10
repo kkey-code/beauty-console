@@ -1,5 +1,8 @@
 package com.wkr.storepojo.enums;
 
+/**
+ * 客户等级枚举，统一客户分级对应的编码和展示名称。
+ */
 public enum CustomerLevelEnum {
 
     NORMAL(0, "普通"),

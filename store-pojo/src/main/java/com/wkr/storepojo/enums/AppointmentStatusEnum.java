@@ -1,5 +1,8 @@
 package com.wkr.storepojo.enums;
 
+/**
+ * 预约状态枚举，统一预约生命周期状态值及其展示含义。
+ */
 public enum AppointmentStatusEnum {
 
     PENDING(0, "待确认"),

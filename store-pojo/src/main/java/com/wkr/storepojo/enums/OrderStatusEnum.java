@@ -2,6 +2,9 @@ package com.wkr.storepojo.enums;
 
 import com.wkr.storecommon.exception.BusinessException;
 
+/**
+ * 订单状态枚举，统一订单生命周期状态并提供状态转换校验。
+ */
 public enum OrderStatusEnum {
 
     PENDING(0, "待服务"),

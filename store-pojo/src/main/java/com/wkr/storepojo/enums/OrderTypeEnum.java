@@ -1,5 +1,8 @@
 package com.wkr.storepojo.enums;
 
+/**
+ * 订单类型枚举，区分服务、次卡、护理卡、会员卡和疗程卡等订单。
+ */
 public enum OrderTypeEnum {
 
     SERVICE("service", "服务"),

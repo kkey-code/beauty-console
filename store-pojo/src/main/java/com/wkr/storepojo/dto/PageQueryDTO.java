@@ -8,6 +8,9 @@ import lombok.Data;
 
 import java.io.Serializable;
 
+/**
+ * 分页查询基础参数，统一承载页码和每页记录数。
+ */
 @Data
 @ApiModel(value = "PageQueryDTO", description = "分页查询基础参数")
 public class PageQueryDTO implements Serializable {

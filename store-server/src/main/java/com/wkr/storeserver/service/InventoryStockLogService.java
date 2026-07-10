@@ -1,6 +1,7 @@
 package com.wkr.storeserver.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.wkr.storepojo.dto.InventoryStockLogDTO;
 import com.wkr.storepojo.entity.InventoryStockLog;
 
 /**
@@ -10,4 +11,5 @@ import com.wkr.storepojo.entity.InventoryStockLog;
 */
 public interface InventoryStockLogService extends IService<InventoryStockLog> {
 
+    InventoryStockLog recordStockChange(InventoryStockLogDTO dto, String changeType);
 }

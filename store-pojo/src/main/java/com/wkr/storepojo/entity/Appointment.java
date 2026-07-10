@@ -15,6 +15,9 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
+/**
+ * 预约实体，映射数据库记录并供 MyBatis-Plus 完成持久化操作。
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

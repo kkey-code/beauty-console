@@ -1,5 +1,8 @@
 package com.wkr.storepojo.enums;
 
+/**
+ * 订单支付状态枚举，统一未支付、部分支付和已支付等状态。
+ */
 public enum PayStatusEnum {
 
     UNPAID(0, "未支付"),

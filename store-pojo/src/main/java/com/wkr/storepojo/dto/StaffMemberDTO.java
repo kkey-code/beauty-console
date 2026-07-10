@@ -9,6 +9,9 @@ import lombok.Data;
 
 import java.io.Serializable;
 
+/**
+ * 员工档案请求参数，承载新增或修改接口的数据并声明输入校验规则。
+ */
 @Data
 @ApiModel(value = "StaffMemberDTO", description = "员工保存参数")
 public class StaffMemberDTO implements Serializable {

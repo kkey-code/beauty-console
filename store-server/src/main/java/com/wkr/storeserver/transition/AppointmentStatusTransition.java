@@ -7,6 +7,9 @@ import com.wkr.storepojo.enums.AppointmentStatusEnum;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 预约状态转换规则，集中校验预约在确认、完成和取消等状态间的合法流转。
+ */
 public class AppointmentStatusTransition {
 
     private static final Map<AppointmentStatusEnum, Map<AppointmentEventEnum, AppointmentStatusEnum>> RULES = new HashMap<>();

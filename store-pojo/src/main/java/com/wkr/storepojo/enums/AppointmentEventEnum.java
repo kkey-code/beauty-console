@@ -1,5 +1,8 @@
 package com.wkr.storepojo.enums;
 
+/**
+ * 预约业务事件枚举，描述触发预约状态变化的操作类型。
+ */
 public enum AppointmentEventEnum {
 
     CONFIRM("确认"),

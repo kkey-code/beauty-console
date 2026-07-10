@@ -1,4 +1,4 @@
-package com.wkr.storeserver.service.Impl;
+package com.wkr.storeserver.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -27,6 +27,9 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 预约服务实现，封装该业务模块的查询、校验、状态更新和持久化流程。
+ */
 @Service
 public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appointment> implements AppointmentService {
 

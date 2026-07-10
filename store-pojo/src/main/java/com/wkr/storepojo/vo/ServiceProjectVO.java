@@ -8,6 +8,9 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * 服务项目响应对象，组合接口返回给前端展示的业务字段。
+ */
 @Data
 @ApiModel(value = "ServiceProjectVO", description = "服务项目展示对象")
 public class ServiceProjectVO implements Serializable {

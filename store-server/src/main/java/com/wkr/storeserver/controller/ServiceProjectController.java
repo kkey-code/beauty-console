@@ -33,6 +33,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 服务项目接口控制器，负责接收管理端请求、校验参数并调用服务层完成业务处理。
+ */
 @Slf4j
 @RestController
 @RequestMapping("/admin/service-projects")

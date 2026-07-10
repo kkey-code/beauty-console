@@ -7,6 +7,9 @@ import lombok.Data;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
+/**
+ * 员工档案响应对象，组合接口返回给前端展示的业务字段。
+ */
 @Data
 @ApiModel(value = "StaffMemberVO", description = "员工展示对象")
 public class StaffMemberVO implements Serializable {

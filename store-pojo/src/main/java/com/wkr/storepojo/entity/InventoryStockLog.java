@@ -15,6 +15,9 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * 库存变动流水实体，映射数据库记录并供 MyBatis-Plus 完成持久化操作。
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

@@ -1,6 +1,10 @@
 package com.wkr.storepojo.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
@@ -8,17 +12,18 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 员工档案实体，映射数据库记录并供 MyBatis-Plus 完成持久化操作。
+ * 服务项目耗材关系实体，维护服务项目完成时需要扣减的库存 SKU 和默认消耗数量。
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("staff_member")
-@ApiModel(value = "StaffMember对象", description = "员工表")
-public class StaffMember implements Serializable {
+@TableName("service_project_inventory")
+@ApiModel(value = "ServiceProjectInventory对象", description = "服务项目耗材关系表")
+public class ServiceProjectInventory implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -26,20 +31,14 @@ public class StaffMember implements Serializable {
     @ApiModelProperty("主键")
     private Long id;
 
-    @ApiModelProperty("员工姓名")
-    private String name;
+    @ApiModelProperty("服务项目ID")
+    private Long serviceProjectId;
 
-    @ApiModelProperty("手机号")
-    private String phone;
+    @ApiModelProperty("库存物品ID")
+    private Long inventoryId;
 
-    @ApiModelProperty("性别：1男，2女")
-    private Integer gender;
-
-    @ApiModelProperty("级别")
-    private String level;
-
-    @ApiModelProperty("职位")
-    private String position;
+    @ApiModelProperty("单次服务默认消耗数量")
+    private BigDecimal consumeQuantity;
 
     @ApiModelProperty("状态：0停用，1启用")
     private Integer status;
@@ -54,5 +53,4 @@ public class StaffMember implements Serializable {
     @TableField(fill = FieldFill.INSERT_UPDATE)
     @ApiModelProperty("更新时间")
     private LocalDateTime updateTime;
-
 }

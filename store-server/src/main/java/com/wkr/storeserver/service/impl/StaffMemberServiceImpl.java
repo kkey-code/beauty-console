@@ -1,4 +1,4 @@
-package com.wkr.storeserver.service.Impl;
+package com.wkr.storeserver.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.wkr.storepojo.entity.StaffMember;

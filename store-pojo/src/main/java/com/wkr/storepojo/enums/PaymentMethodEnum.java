@@ -1,5 +1,8 @@
 package com.wkr.storepojo.enums;
 
+/**
+ * 支付方式枚举，统一微信、支付宝、现金和卡项等支付渠道。
+ */
 public enum PaymentMethodEnum {
 
     WECHAT("wechat", "微信"),

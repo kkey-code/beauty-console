@@ -16,6 +16,9 @@ import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * 客户档案实体，映射数据库记录并供 MyBatis-Plus 完成持久化操作。
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

@@ -5,6 +5,9 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+/**
+ * 库存物品分页查询参数，封装页码以及该模块支持的筛选条件。
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @ApiModel(value = "InventorySkuPageQueryDTO", description = "库存物品分页查询参数")

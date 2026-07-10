@@ -12,6 +12,9 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * 订单收付款参数，承载支付方式、金额和流水状态等信息。
+ */
 @Data
 @ApiModel(value = "OrderPaymentDTO", description = "订单收款参数")
 public class OrderPaymentDTO implements Serializable {

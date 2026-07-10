@@ -9,6 +9,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * 服务订单响应对象，组合接口返回给前端展示的业务字段。
+ */
 @Data
 @ApiModel(value = "ServiceOrderVO", description = "订单展示对象")
 public class ServiceOrderVO implements Serializable {

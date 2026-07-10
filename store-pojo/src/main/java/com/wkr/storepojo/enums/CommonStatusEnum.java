@@ -1,5 +1,8 @@
 package com.wkr.storepojo.enums;
 
+/**
+ * 通用启用状态枚举，统一启用和禁用的数据取值。
+ */
 public enum CommonStatusEnum {
 
     DISABLED(0, "停用"),

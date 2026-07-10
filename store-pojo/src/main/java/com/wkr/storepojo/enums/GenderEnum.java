@@ -1,5 +1,8 @@
 package com.wkr.storepojo.enums;
 
+/**
+ * 性别枚举，统一性别字段的存储值和展示名称。
+ */
 public enum GenderEnum {
 
     MALE(1, "男"),

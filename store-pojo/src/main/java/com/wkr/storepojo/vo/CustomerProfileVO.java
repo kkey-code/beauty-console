@@ -8,6 +8,9 @@ import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * 客户档案响应对象，组合接口返回给前端展示的业务字段。
+ */
 @Data
 @ApiModel(value = "CustomerProfileVO", description = "客户档案展示对象")
 public class CustomerProfileVO implements Serializable {

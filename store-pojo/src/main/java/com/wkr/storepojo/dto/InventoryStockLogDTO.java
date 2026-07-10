@@ -11,6 +11,9 @@ import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
 
+/**
+ * 库存变动流水请求参数，承载新增或修改接口的数据并声明输入校验规则。
+ */
 @Data
 @ApiModel(value = "InventoryStockLogDTO", description = "库存流水保存参数")
 public class InventoryStockLogDTO implements Serializable {

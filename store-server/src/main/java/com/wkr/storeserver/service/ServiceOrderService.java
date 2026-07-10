@@ -17,4 +17,6 @@ public interface ServiceOrderService extends IService<ServiceOrder> {
     List<ServiceOrderItemVO> getOrderItemsByOrderId(Long orderId);
 
     List<PaymentRecordVO> getPaymentRecordByOrderId(Long id);
+
+    boolean finish(Long id);
 }

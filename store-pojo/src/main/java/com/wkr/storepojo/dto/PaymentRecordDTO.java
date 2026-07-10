@@ -12,6 +12,9 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * 收款流水请求参数，承载新增或修改接口的数据并声明输入校验规则。
+ */
 @Data
 @ApiModel(value = "PaymentRecordDTO", description = "收款流水保存参数")
 public class PaymentRecordDTO implements Serializable {

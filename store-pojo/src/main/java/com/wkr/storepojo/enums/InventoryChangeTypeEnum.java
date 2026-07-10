@@ -1,5 +1,8 @@
 package com.wkr.storepojo.enums;
 
+/**
+ * 库存变动类型枚举，区分入库、出库、盘点、损耗和退回等流水。
+ */
 public enum InventoryChangeTypeEnum {
 
     STOCK_IN("stock_in", "入库"),
