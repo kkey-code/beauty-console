@@ -60,7 +60,9 @@ public class InventoryStockLogController {
                 .eq(changeType != null, InventoryStockLog::getChangeType, changeType)
                 .ge(dto.getBeginTime() != null, InventoryStockLog::getCreateTime, dto.getBeginTime())
                 .le(dto.getEndTime() != null, InventoryStockLog::getCreateTime, dto.getEndTime())
-                .eq(dto.getRelatedOrderId() != null, InventoryStockLog::getRelatedOrderId, dto.getRelatedOrderId());
+                .eq(dto.getRelatedOrderId() != null, InventoryStockLog::getRelatedOrderId, dto.getRelatedOrderId())
+                .orderByDesc(InventoryStockLog::getCreateTime)
+                .orderByDesc(InventoryStockLog::getId);
 
         Page<InventoryStockLog> pageResult = inventoryStockLogService.page(page, wrapper);
 

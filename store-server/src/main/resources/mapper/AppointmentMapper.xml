@@ -36,6 +36,6 @@
                 AND a.appointment_time BETWEEN #{dto.beginTime} AND #{dto.endTime}
             </if>
         </where>
-        ORDER BY a.appointment_time DESC
+        ORDER BY a.appointment_time DESC, a.id DESC
     </select>
 </mapper>

@@ -25,6 +25,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -208,6 +209,20 @@ class ServiceOrderServiceImplFinishTest {
         assertEquals("Alice", result.get(0).getStaffName());
         assertEquals("Bob", result.get(1).getStaffName());
         verify(staffMemberService).listByIds(anyCollection());
+        verify(staffMemberService, never()).getById(anyLong());
+    }
+
+    @Test
+    void getOrderItemsAllowsMissingStaffId() {
+        ServiceOrderItem item = orderItem(1);
+        item.setStaffId(null);
+        when(serviceOrderItemService.list(any(Wrapper.class))).thenReturn(List.of(item));
+
+        List<ServiceOrderItemVO> result = service.getOrderItemsByOrderId(2001L);
+
+        assertEquals(1, result.size());
+        assertNull(result.get(0).getStaffName());
+        verify(staffMemberService, never()).listByIds(anyCollection());
         verify(staffMemberService, never()).getById(anyLong());
     }
 

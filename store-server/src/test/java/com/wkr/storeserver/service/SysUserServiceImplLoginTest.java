@@ -92,6 +92,44 @@ class SysUserServiceImplLoginTest {
         assertEquals("用户角色无效", exception.getMessage());
     }
 
+    @Test
+    void updateStatusRejectsInvalidStatus() {
+        BusinessException nullStatusException = assertThrows(
+                BusinessException.class,
+                () -> service.updateStatus(1001L, null));
+        assertEquals("用户状态不能为空", nullStatusException.getMessage());
+
+        BusinessException invalidStatusException = assertThrows(
+                BusinessException.class,
+                () -> service.updateStatus(1001L, 2));
+        assertEquals("用户状态只能是0或1", invalidStatusException.getMessage());
+    }
+
+    @Test
+    void updateStatusRejectsMissingUser() {
+        when(sysUserMapper.updateById(any(SysUser.class))).thenReturn(0);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.updateStatus(1001L, 0));
+
+        assertEquals("用户不存在或状态未更新", exception.getMessage());
+    }
+
+    @Test
+    void updateStatusUpdatesStatusAndTimestamp() {
+        when(sysUserMapper.updateById(any(SysUser.class))).thenReturn(1);
+
+        service.updateStatus(1001L, 0);
+
+        ArgumentCaptor<SysUser> updateCaptor = ArgumentCaptor.forClass(SysUser.class);
+        verify(sysUserMapper).updateById(updateCaptor.capture());
+        SysUser update = updateCaptor.getValue();
+        assertEquals(1001L, update.getId());
+        assertEquals(0, update.getStatus());
+        assertNotNull(update.getUpdateTime());
+    }
+
     private LoginUserVO loginUser(RoleEnum role) {
         LoginUserVO user = new LoginUserVO();
         user.setId(1001L);

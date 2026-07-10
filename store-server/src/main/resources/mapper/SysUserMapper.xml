@@ -39,6 +39,7 @@
                 and u.role_id = #{roleId}
             </if>
         </where>
+        order by u.create_time desc, u.id desc
     </select>
     <select id="getByID" resultType="com.wkr.storepojo.vo.SysUserVO">
         select u.id,

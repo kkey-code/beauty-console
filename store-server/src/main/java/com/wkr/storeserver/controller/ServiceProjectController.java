@@ -56,7 +56,9 @@ public class ServiceProjectController {
         LambdaQueryWrapper<ServiceProject> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(StringUtils.hasText(dto.getName()), ServiceProject::getName, dto.getName())
                 .eq(StringUtils.hasText(dto.getCategory()), ServiceProject::getCategory, dto.getCategory())
-                .eq(dto.getStatus() != null, ServiceProject::getStatus, dto.getStatus());
+                .eq(dto.getStatus() != null, ServiceProject::getStatus, dto.getStatus())
+                .orderByDesc(ServiceProject::getCreateTime)
+                .orderByDesc(ServiceProject::getId);
 
         IPage<ServiceProject> pageResult = serviceProjectService.page(page, wrapper);
 

@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.wkr.storecommon.common.JwtClaimsConstant;
 import com.wkr.storecommon.common.PageResult;
 import com.wkr.storecommon.exception.BusinessException;
-import com.wkr.storecommon.exception.SystemException;
 import com.wkr.storecommon.properties.JwtProperties;
 import com.wkr.storecommon.util.JwtUtils;
 import com.wkr.storepojo.dto.SysUserLoginDTO;
@@ -109,6 +108,16 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
     @Override
     public void updateStatus(Long id, Integer status) {
+        if (id == null) {
+            throw new BusinessException("用户ID不能为空");
+        }
+        if (status == null) {
+            throw new BusinessException("用户状态不能为空");
+        }
+        if (!status.equals(0) && !status.equals(1)) {
+            throw new BusinessException("用户状态只能是0或1");
+        }
+
         SysUser sysUser = new SysUser();
         sysUser.setStatus(status);
         sysUser.setId(id);
@@ -116,7 +125,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
         int updated = sysUserMapper.updateById(sysUser);
         if (updated != 1) {
-            throw new SystemException("更新用户状态失败");
+            throw new BusinessException("用户不存在或状态未更新");
         }
     }
 

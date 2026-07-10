@@ -1,5 +1,6 @@
 package com.wkr.storeserver.controller;
 
+import com.wkr.storecommon.common.BaseContext;
 import com.wkr.storecommon.common.PageResult;
 import com.wkr.storecommon.common.Result;
 import com.wkr.storecommon.exception.BusinessException;
@@ -18,6 +19,7 @@ import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -29,6 +31,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * 预约接口控制器，负责接收管理端请求、校验参数并调用服务层完成业务处理。
@@ -38,6 +41,9 @@ import java.time.LocalDateTime;
 @RequestMapping("/admin/appointments")
 @Api(tags = "预约相关接口")
 public class AppointmentController {
+
+    private static final DateTimeFormatter APPOINTMENT_NO_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS");
 
     private final AppointmentService appointmentService;
     private final AppointmentItemService appointmentItemService;
@@ -65,8 +71,7 @@ public class AppointmentController {
     public Result<Boolean> add(@Valid @RequestBody AppointmentDTO dto) {
         Appointment appointment = new Appointment();
         BeanUtils.copyProperties(dto, appointment);
-        appointment.setCreateTime(LocalDateTime.now());
-        appointment.setUpdateTime(LocalDateTime.now());
+        fillAddDefaults(appointment);
 
         boolean saved = appointmentService.save(appointment);
         if (!saved) {
@@ -122,5 +127,24 @@ public class AppointmentController {
     @ApiOperation("删除预约")
     public Result<Boolean> delete(@PathVariable("id") Long id) {
         return Result.success(appointmentService.removeById(id));
+    }
+
+    private void fillAddDefaults(Appointment appointment) {
+        LocalDateTime now = LocalDateTime.now();
+        if (!StringUtils.hasText(appointment.getAppointmentNo())) {
+            appointment.setAppointmentNo(generateAppointmentNo());
+        }
+        if (appointment.getStaffId() == null) {
+            appointment.setStaffId(BaseContext.getCurrentId());
+        }
+        if (appointment.getStaffId() == null) {
+            throw new BusinessException("主服务员工不能为空");
+        }
+        appointment.setCreateTime(now);
+        appointment.setUpdateTime(now);
+    }
+
+    private String generateAppointmentNo() {
+        return "APT" + LocalDateTime.now().format(APPOINTMENT_NO_FORMATTER);
     }
 }

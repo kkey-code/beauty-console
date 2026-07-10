@@ -169,8 +169,14 @@ public class InventorySkuController {
         wrapper.like(StringUtils.hasText(dto.getName()), InventorySku::getName, dto.getName())
                 .eq(StringUtils.hasText(dto.getCategory()), InventorySku::getCategory, dto.getCategory())
                 .eq(dto.getStatus() != null, InventorySku::getStatus, dto.getStatus())
-                .apply(Boolean.TRUE.equals(dto.getLowStockOnly()), "quantity < safety_stock")
-                .orderByAsc(InventorySku::getId);
+                .apply(Boolean.TRUE.equals(dto.getLowStockOnly()), "quantity <= safety_stock");
+        if (Boolean.TRUE.equals(dto.getLowStockOnly())) {
+            wrapper.orderByAsc(InventorySku::getQuantity)
+                    .orderByAsc(InventorySku::getId);
+        } else {
+            wrapper.orderByDesc(InventorySku::getCreateTime)
+                    .orderByDesc(InventorySku::getId);
+        }
         return wrapper;
     }
 

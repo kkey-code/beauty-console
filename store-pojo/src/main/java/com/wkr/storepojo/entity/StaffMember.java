@@ -35,6 +35,7 @@ public class StaffMember implements Serializable {
     @ApiModelProperty("性别：1男，2女")
     private Integer gender;
 
+    @TableField(exist = false)
     @ApiModelProperty("级别")
     private String level;
 

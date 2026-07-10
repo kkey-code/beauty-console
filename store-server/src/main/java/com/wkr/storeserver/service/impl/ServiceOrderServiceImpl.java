@@ -232,7 +232,10 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
                 .map(item -> {
                     ServiceOrderItemVO itemVO = new ServiceOrderItemVO();
                     BeanUtils.copyProperties(item, itemVO);
-                    itemVO.setStaffName(staffNameById.get(item.getStaffId()));
+                    Long staffId = item.getStaffId();
+                    if (staffId != null) {
+                        itemVO.setStaffName(staffNameById.get(staffId));
+                    }
                     return itemVO;
                 })
                 .collect(Collectors.toList());
@@ -294,7 +297,9 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
                 .eq(dto.getDebtStatus() != null, ServiceOrder::getDebtStatus, dto.getDebtStatus())
                 .eq(dto.getOrderStatus() != null, ServiceOrder::getOrderStatus, dto.getOrderStatus())
                 .ge(dto.getBeginTime() != null, ServiceOrder::getCreateTime, dto.getBeginTime())
-                .le(dto.getEndTime() != null, ServiceOrder::getCreateTime, dto.getEndTime());
+                .le(dto.getEndTime() != null, ServiceOrder::getCreateTime, dto.getEndTime())
+                .orderByDesc(ServiceOrder::getCreateTime)
+                .orderByDesc(ServiceOrder::getId);
 
         if (StringUtils.hasText(dto.getCustomerName())) {
             List<Long> customerIds = customerProfileService.list(new LambdaQueryWrapper<CustomerProfile>()

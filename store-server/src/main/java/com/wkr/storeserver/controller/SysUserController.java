@@ -1,7 +1,9 @@
 package com.wkr.storeserver.controller;
 
+import com.wkr.storecommon.common.BaseContext;
 import com.wkr.storecommon.common.PageResult;
 import com.wkr.storecommon.common.Result;
+import com.wkr.storecommon.exception.BusinessException;
 import com.wkr.storecommon.exception.SystemException;
 import com.wkr.storepojo.dto.SysUserDTO;
 import com.wkr.storepojo.dto.SysUserLoginDTO;
@@ -26,6 +28,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
@@ -99,17 +102,29 @@ public class SysUserController {
 
     @PatchMapping("/{id}/status")
     @ApiOperation("修改用户状态")
-    public Result<?> updateStatus(@PathVariable("id") Long id, @Valid @RequestBody SysUserStatusDTO sysUserStatusDTO) {
-        sysUserService.updateStatus(id, sysUserStatusDTO.getStatus());
+    public Result<?> updateStatus(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody(required = false) SysUserStatusDTO sysUserStatusDTO,
+            @RequestParam(value = "status", required = false) Integer status) {
+        Integer targetStatus = status != null
+                ? status
+                : sysUserStatusDTO == null ? null : sysUserStatusDTO.getStatus();
+        sysUserService.updateStatus(id, targetStatus);
         return Result.success();
     }
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除用户")
     public Result<?> deleteByid(@PathVariable("id") Long id) {
+        if (id.equals(BaseContext.getCurrentUserId())) {
+            throw new BusinessException("不能删除当前登录账号");
+        }
+        if (sysUserService.getById(id) == null) {
+            throw new BusinessException("用户不存在");
+        }
         boolean removed = sysUserService.removeById(id);
         if (!removed) {
-            throw new SystemException("删除失败");
+            throw new BusinessException("删除用户失败");
         }
         return Result.success();
     }

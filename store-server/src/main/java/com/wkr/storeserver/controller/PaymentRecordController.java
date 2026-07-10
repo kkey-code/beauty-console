@@ -68,7 +68,9 @@ public class PaymentRecordController {
                 .eq(StringUtils.hasText(dto.getPaymentMethod()), PaymentRecord::getPaymentMethod, dto.getPaymentMethod())
                 .eq(dto.getPayStatus() != null, PaymentRecord::getPayStatus, dto.getPayStatus())
                 .ge(dto.getBeginTime() != null, PaymentRecord::getPayTime, dto.getBeginTime())
-                .le(dto.getEndTime() != null, PaymentRecord::getPayTime, dto.getEndTime());
+                .le(dto.getEndTime() != null, PaymentRecord::getPayTime, dto.getEndTime())
+                .orderByDesc(PaymentRecord::getPayTime)
+                .orderByDesc(PaymentRecord::getId);
 
         Page<PaymentRecord> pageRecord = paymentRecordService.page(page, wrapper);
 

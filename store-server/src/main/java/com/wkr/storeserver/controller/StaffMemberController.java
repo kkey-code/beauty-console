@@ -57,7 +57,9 @@ public class StaffMemberController {
         LambdaQueryWrapper<StaffMember> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(StringUtils.hasText(dto.getName()), StaffMember::getName, dto.getName())
                 .like(StringUtils.hasText(dto.getPhone()), StaffMember::getPhone, dto.getPhone())
-                .eq(dto.getStatus() != null, StaffMember::getStatus, dto.getStatus());
+                .eq(dto.getStatus() != null, StaffMember::getStatus, dto.getStatus())
+                .orderByDesc(StaffMember::getCreateTime)
+                .orderByDesc(StaffMember::getId);
 
         Page<StaffMember> page = staffMemberService.page(pageQuery, wrapper);
 

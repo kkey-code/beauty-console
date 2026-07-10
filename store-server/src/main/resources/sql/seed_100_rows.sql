@@ -1,5 +1,5 @@
 -- db_platform seed data for local API testing.
--- Password for admin/staff/readonly is 123456.
+-- Password for admin/manager/staff/inventory/finance/readonly is 123456.
 
 USE db_platform;
 
@@ -56,8 +56,11 @@ INSERT INTO sys_user (
 )
 VALUES
     (1001, 'admin', '$2a$10$8CNVvlRfFo6bTbYtxDLW1edK3my3Esj0rXuV.pKqhLX4zUKpdqrRC', 1, 1001, 1, NOW(), NOW(), NOW()),
-    (1002, 'staff', '$2a$10$8CNVvlRfFo6bTbYtxDLW1edK3my3Esj0rXuV.pKqhLX4zUKpdqrRC', 3, 1002, 1, NOW(), NOW(), NOW()),
-    (1003, 'readonly', '$2a$10$8CNVvlRfFo6bTbYtxDLW1edK3my3Esj0rXuV.pKqhLX4zUKpdqrRC', 6, 1003, 1, NOW(), NOW(), NOW());
+    (1002, 'manager', '$2a$10$8CNVvlRfFo6bTbYtxDLW1edK3my3Esj0rXuV.pKqhLX4zUKpdqrRC', 2, 1002, 1, NOW(), NOW(), NOW()),
+    (1003, 'staff', '$2a$10$8CNVvlRfFo6bTbYtxDLW1edK3my3Esj0rXuV.pKqhLX4zUKpdqrRC', 3, 1003, 1, NOW(), NOW(), NOW()),
+    (1004, 'inventory', '$2a$10$8CNVvlRfFo6bTbYtxDLW1edK3my3Esj0rXuV.pKqhLX4zUKpdqrRC', 4, 1004, 1, NOW(), NOW(), NOW()),
+    (1005, 'finance', '$2a$10$8CNVvlRfFo6bTbYtxDLW1edK3my3Esj0rXuV.pKqhLX4zUKpdqrRC', 5, 1005, 1, NOW(), NOW(), NOW()),
+    (1006, 'readonly', '$2a$10$8CNVvlRfFo6bTbYtxDLW1edK3my3Esj0rXuV.pKqhLX4zUKpdqrRC', 6, 1006, 1, NOW(), NOW(), NOW());
 
 INSERT INTO customer_profile (
     id, name, phone, gender, birthday, level, source, remark, create_time, update_time, deleted

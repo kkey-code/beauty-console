@@ -354,6 +354,7 @@ class ControllerApiUnitTest {
         when(sysUserService.login(any(SysUserLoginDTO.class))).thenReturn(loginUserVO);
         when(sysUserService.page(any(SysUserPageQueryDTO.class))).thenReturn(pageResult(sysUserVO()));
         when(sysUserService.getByID(anyLong())).thenReturn(sysUserVO());
+        when(sysUserService.getById(anyLong())).thenReturn(sysUser());
 
         when(appointmentService.List(any(AppointmentPageQueryDTO.class))).thenReturn(Result.success(pageResult(new AppointmentVO())));
         when(appointmentService.getByID(anyLong())).thenReturn(new AppointmentVO());
@@ -483,6 +484,15 @@ class ControllerApiUnitTest {
         vo.setRoleId(1);
         vo.setStatus(1);
         return vo;
+    }
+
+    private SysUser sysUser() {
+        SysUser entity = new SysUser();
+        entity.setId(1L);
+        entity.setUsername("admin");
+        entity.setRoleId(1);
+        entity.setStatus(1);
+        return entity;
     }
 
     private StaffMember staffMember() {

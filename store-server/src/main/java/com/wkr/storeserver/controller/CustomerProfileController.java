@@ -56,7 +56,9 @@ public class CustomerProfileController {
         wrapper.like(StringUtils.hasText(dto.getName()), CustomerProfile::getName, dto.getName())
                 .eq(StringUtils.hasText(dto.getPhone()), CustomerProfile::getPhone, dto.getPhone())
                 .eq(dto.getLevel() != null, CustomerProfile::getLevel, dto.getLevel())
-                .eq(StringUtils.hasText(dto.getSource()), CustomerProfile::getSource, dto.getSource());
+                .eq(StringUtils.hasText(dto.getSource()), CustomerProfile::getSource, dto.getSource())
+                .orderByDesc(CustomerProfile::getCreateTime)
+                .orderByDesc(CustomerProfile::getId);
 
         IPage<CustomerProfile> pageResult = customerProfileService.page(page, wrapper);
 
