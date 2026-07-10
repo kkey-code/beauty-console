@@ -17,6 +17,7 @@ import com.wkr.storepojo.entity.PaymentRecord;
 import com.wkr.storepojo.entity.ServiceOrder;
 import com.wkr.storepojo.entity.ServiceOrderItem;
 import com.wkr.storepojo.entity.ServiceProject;
+import com.wkr.storepojo.entity.ServiceProjectInventory;
 import com.wkr.storepojo.entity.StaffMember;
 import com.wkr.storepojo.entity.SysUser;
 import com.wkr.storepojo.vo.AppointmentVO;
@@ -33,6 +34,7 @@ import com.wkr.storeserver.controller.PaymentRecordController;
 import com.wkr.storeserver.controller.ServiceOrderController;
 import com.wkr.storeserver.controller.ServiceOrderItemController;
 import com.wkr.storeserver.controller.ServiceProjectController;
+import com.wkr.storeserver.controller.ServiceProjectInventoryController;
 import com.wkr.storeserver.controller.StaffMemberController;
 import com.wkr.storeserver.controller.SysUserController;
 import com.wkr.storeserver.handler.GlobalExceptionHandler;
@@ -45,6 +47,7 @@ import com.wkr.storeserver.service.PaymentRecordService;
 import com.wkr.storeserver.service.ServiceOrderItemService;
 import com.wkr.storeserver.service.ServiceOrderService;
 import com.wkr.storeserver.service.ServiceProjectService;
+import com.wkr.storeserver.service.ServiceProjectInventoryService;
 import com.wkr.storeserver.service.StaffMemberService;
 import com.wkr.storeserver.service.SysUserService;
 import org.junit.jupiter.api.BeforeEach;
@@ -78,6 +81,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * Controller 接口单元测试，使用 MockMvc 和模拟服务验证全部管理端接口的请求绑定与统一响应。
+ */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class ControllerApiUnitTest {
@@ -92,6 +98,8 @@ class ControllerApiUnitTest {
     private StaffMemberService staffMemberService;
     @Mock
     private ServiceProjectService serviceProjectService;
+    @Mock
+    private ServiceProjectInventoryService serviceProjectInventoryService;
     @Mock
     private ServiceOrderItemService serviceOrderItemService;
     @Mock
@@ -115,6 +123,10 @@ class ControllerApiUnitTest {
                         new SysUserController(sysUserService, passwordEncoder),
                         new StaffMemberController(staffMemberService),
                         new ServiceProjectController(serviceProjectService),
+                        new ServiceProjectInventoryController(
+                                serviceProjectInventoryService,
+                                serviceProjectService,
+                                inventorySkuService),
                         new ServiceOrderItemController(serviceOrderItemService, staffMemberService),
                         new ServiceOrderController(
                                 serviceOrderService,
@@ -194,6 +206,24 @@ class ControllerApiUnitTest {
     }
 
     @Test
+    void serviceProjectInventoryEndpointsReturnSuccess() throws Exception {
+        mockMvc.perform(get("/admin/service-project-inventories").param("page", "1").param("pageSize", "10"))
+                .andExpect(okWithCodeOne());
+        mockMvc.perform(get("/admin/service-project-inventories/1"))
+                .andExpect(okWithCodeOne());
+        mockMvc.perform(post("/admin/service-project-inventories")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(serviceProjectInventoryJson()))
+                .andExpect(okWithCodeOne());
+        mockMvc.perform(put("/admin/service-project-inventories/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(serviceProjectInventoryJson()))
+                .andExpect(okWithCodeOne());
+        mockMvc.perform(delete("/admin/service-project-inventories/1"))
+                .andExpect(okWithCodeOne());
+    }
+
+    @Test
     void customerProfileEndpointsReturnSuccess() throws Exception {
         mockMvc.perform(get("/admin/customers").param("page", "1").param("pageSize", "10"))
                 .andExpect(okWithCodeOne());
@@ -211,6 +241,8 @@ class ControllerApiUnitTest {
     void inventorySkuEndpointsReturnSuccess() throws Exception {
         mockMvc.perform(get("/admin/inventory-skus").param("page", "1").param("pageSize", "10"))
                 .andExpect(okWithCodeOne());
+        mockMvc.perform(get("/admin/inventory-skus/export").param("page", "1").param("pageSize", "10"))
+                .andExpect(status().isOk());
         mockMvc.perform(get("/admin/inventory-skus/1"))
                 .andExpect(okWithCodeOne());
         mockMvc.perform(post("/admin/inventory-skus").contentType(MediaType.APPLICATION_JSON).content(inventorySkuJson()))
@@ -330,6 +362,8 @@ class ControllerApiUnitTest {
 
         when(staffMemberService.page(any(Page.class), any(Wrapper.class))).thenReturn(pageOf(staffMember()));
         when(serviceProjectService.page(any(Page.class), any(Wrapper.class))).thenReturn(pageOf(serviceProject()));
+        when(serviceProjectInventoryService.page(any(Page.class), any(Wrapper.class)))
+                .thenReturn(pageOf(serviceProjectInventory()));
         when(customerProfileService.page(any(Page.class), any(Wrapper.class))).thenReturn(pageOf(customerProfile()));
         when(inventorySkuService.page(any(Page.class), any(Wrapper.class))).thenReturn(pageOf(inventorySku()));
         when(inventoryStockLogService.page(any(Page.class), any(Wrapper.class))).thenReturn(pageOf(stockLog("stock_in")));
@@ -338,10 +372,12 @@ class ControllerApiUnitTest {
 
         when(staffMemberService.getById(anyLong())).thenAnswer(invocation -> staffMember());
         when(serviceProjectService.getById(anyLong())).thenAnswer(invocation -> serviceProject());
+        when(serviceProjectInventoryService.getById(anyLong())).thenAnswer(invocation -> serviceProjectInventory());
         when(customerProfileService.getById(anyLong())).thenAnswer(invocation -> customerProfile());
         when(inventorySkuService.getById(anyLong())).thenAnswer(invocation -> inventorySku());
         when(inventorySkuService.getOne(any(Wrapper.class))).thenAnswer(invocation -> inventorySku());
         when(inventoryStockLogService.getById(anyLong())).thenAnswer(invocation -> stockLog("stock_in"));
+        when(inventoryStockLogService.recordStockChange(any(), any())).thenAnswer(invocation -> stockLog("stock_in"));
         when(paymentRecordService.getById(anyLong())).thenReturn(paymentRecord(1), paymentRecord(0), paymentRecord(0));
         when(serviceOrderService.getById(anyLong())).thenAnswer(invocation -> serviceOrder());
         when(appointmentService.getById(anyLong())).thenAnswer(invocation -> appointment());
@@ -349,14 +385,19 @@ class ControllerApiUnitTest {
         when(appointmentItemService.list(any(Wrapper.class))).thenReturn(List.of(appointmentItem()));
         when(serviceOrderItemService.list(any(Wrapper.class))).thenReturn(List.of(serviceOrderItem()));
         when(customerProfileService.list(any(Wrapper.class))).thenReturn(List.of(customerProfile()));
+        when(inventorySkuService.list(any(Wrapper.class))).thenReturn(List.of(inventorySku()));
 
         when(paymentRecordService.count(any(Wrapper.class))).thenReturn(0L);
+        when(serviceProjectInventoryService.count(any(Wrapper.class))).thenReturn(0L);
+        when(inventorySkuService.count(any(Wrapper.class))).thenReturn(1L);
         when(serviceOrderService.getOrderItemsByOrderId(anyLong())).thenReturn(List.of(new ServiceOrderItemVO()));
         when(serviceOrderService.getPaymentRecordByOrderId(anyLong())).thenReturn(List.of(new PaymentRecordVO()));
+        when(serviceOrderService.finish(anyLong())).thenReturn(true);
 
         stubSave(sysUserService);
         stubSave(staffMemberService);
         stubSave(serviceProjectService);
+        stubSave(serviceProjectInventoryService);
         stubSave(customerProfileService);
         stubSave(inventorySkuService);
         stubSave(inventoryStockLogService);
@@ -368,6 +409,7 @@ class ControllerApiUnitTest {
 
         when(staffMemberService.updateById(any(StaffMember.class))).thenReturn(true);
         when(serviceProjectService.updateById(any(ServiceProject.class))).thenReturn(true);
+        when(serviceProjectInventoryService.updateById(any(ServiceProjectInventory.class))).thenReturn(true);
         when(customerProfileService.updateById(any(CustomerProfile.class))).thenReturn(true);
         when(inventorySkuService.updateById(any(InventorySku.class))).thenReturn(true);
         when(appointmentService.updateById(any(Appointment.class))).thenReturn(true);
@@ -383,6 +425,7 @@ class ControllerApiUnitTest {
         when(sysUserService.removeById(anyLong())).thenReturn(true);
         when(staffMemberService.removeById(anyLong())).thenReturn(true);
         when(serviceProjectService.removeById(anyLong())).thenReturn(true);
+        when(serviceProjectInventoryService.removeById(anyLong())).thenReturn(true);
         when(customerProfileService.removeById(anyLong())).thenReturn(true);
         when(inventorySkuService.removeById(anyLong())).thenReturn(true);
         when(appointmentService.removeById(anyLong())).thenReturn(true);
@@ -468,8 +511,19 @@ class ControllerApiUnitTest {
         InventorySku entity = new InventorySku();
         entity.setId(1L);
         entity.setName("sku");
+        entity.setUnit("piece");
         entity.setQuantity(BigDecimal.TEN);
         entity.setSafetyStock(BigDecimal.ONE);
+        entity.setStatus(1);
+        return entity;
+    }
+
+    private ServiceProjectInventory serviceProjectInventory() {
+        ServiceProjectInventory entity = new ServiceProjectInventory();
+        entity.setId(1L);
+        entity.setServiceProjectId(1L);
+        entity.setInventoryId(1L);
+        entity.setConsumeQuantity(BigDecimal.ONE);
         entity.setStatus(1);
         return entity;
     }
@@ -567,6 +621,12 @@ class ControllerApiUnitTest {
     private String projectJson() {
         return """
                 {"name":"project","category":"face","price":100,"durationMinutes":60,"description":"desc","status":1}
+                """;
+    }
+
+    private String serviceProjectInventoryJson() {
+        return """
+                {"serviceProjectId":1,"inventoryId":1,"consumeQuantity":1,"status":1,"remark":"ok"}
                 """;
     }
 
