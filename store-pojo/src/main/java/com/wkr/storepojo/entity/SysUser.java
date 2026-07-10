@@ -10,6 +10,9 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
+/**
+ * 系统用户实体，映射数据库记录并供 MyBatis-Plus 完成持久化操作。
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -29,7 +32,7 @@ public class SysUser implements Serializable {
     @ApiModelProperty("登录密码/密码哈希")
     private String passwordHash;
 
-    @ApiModelProperty("角色ID：0只读，1管理员，2员工")
+    @ApiModelProperty("角色ID：1超级管理员，2店长，3普通员工，4库存管理员，5财务/收银，6只读")
     private Integer roleId;
 
     @ApiModelProperty("关联员工ID")

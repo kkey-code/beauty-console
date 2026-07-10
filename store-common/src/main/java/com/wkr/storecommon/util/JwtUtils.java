@@ -9,6 +9,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Map;
 
+/**
+ * JWT 工具类，负责使用统一密钥签发令牌并解析、校验令牌声明。
+ */
 public class JwtUtils {
 
     /**

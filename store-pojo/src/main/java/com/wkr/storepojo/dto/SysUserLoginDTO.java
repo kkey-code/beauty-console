@@ -7,6 +7,9 @@ import lombok.Data;
 
 import java.io.Serializable;
 
+/**
+ * 后台用户登录参数，承载账号和明文密码并执行非空校验。
+ */
 @Data
 @ApiModel(value = "SysUserLoginDTO", description = "登录参数")
 public class SysUserLoginDTO implements Serializable {

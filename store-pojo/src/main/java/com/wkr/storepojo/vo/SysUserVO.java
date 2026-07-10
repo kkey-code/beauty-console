@@ -7,6 +7,9 @@ import lombok.Data;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
+/**
+ * 系统用户响应对象，组合接口返回给前端展示的业务字段。
+ */
 @Data
 @ApiModel(value = "SysUserVO", description = "用户账号展示对象")
 public class SysUserVO implements Serializable {
@@ -19,7 +22,7 @@ public class SysUserVO implements Serializable {
     @ApiModelProperty("登录账号")
     private String username;
 
-    @ApiModelProperty("角色编码")
+    @ApiModelProperty("角色ID")
     private Integer roleId;
 
     @ApiModelProperty("角色名称")
@@ -45,4 +48,7 @@ public class SysUserVO implements Serializable {
 
     @ApiModelProperty("更新时间")
     private LocalDateTime updateTime;
+
+    @ApiModelProperty("角色编码")
+    private String roleCode;
 }

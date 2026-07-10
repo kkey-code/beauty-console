@@ -32,6 +32,7 @@ DELETE FROM appointment WHERE id BETWEEN 1001 AND 1100;
 DELETE FROM sys_user WHERE id BETWEEN 1001 AND 1100;
 DELETE FROM staff_member WHERE id BETWEEN 1001 AND 1100;
 DELETE FROM customer_profile WHERE id BETWEEN 1001 AND 1100;
+DELETE FROM service_project_inventory WHERE id BETWEEN 1001 AND 1100;
 DELETE FROM service_project WHERE id BETWEEN 1001 AND 1100;
 DELETE FROM inventory_sku WHERE id BETWEEN 1001 AND 1100;
 
@@ -55,8 +56,8 @@ INSERT INTO sys_user (
 )
 VALUES
     (1001, 'admin', '$2a$10$8CNVvlRfFo6bTbYtxDLW1edK3my3Esj0rXuV.pKqhLX4zUKpdqrRC', 1, 1001, 1, NOW(), NOW(), NOW()),
-    (1002, 'staff', '$2a$10$8CNVvlRfFo6bTbYtxDLW1edK3my3Esj0rXuV.pKqhLX4zUKpdqrRC', 2, 1002, 1, NOW(), NOW(), NOW()),
-    (1003, 'readonly', '$2a$10$8CNVvlRfFo6bTbYtxDLW1edK3my3Esj0rXuV.pKqhLX4zUKpdqrRC', 3, 1003, 1, NOW(), NOW(), NOW());
+    (1002, 'staff', '$2a$10$8CNVvlRfFo6bTbYtxDLW1edK3my3Esj0rXuV.pKqhLX4zUKpdqrRC', 3, 1002, 1, NOW(), NOW(), NOW()),
+    (1003, 'readonly', '$2a$10$8CNVvlRfFo6bTbYtxDLW1edK3my3Esj0rXuV.pKqhLX4zUKpdqrRC', 6, 1003, 1, NOW(), NOW(), NOW());
 
 INSERT INTO customer_profile (
     id, name, phone, gender, birthday, level, source, remark, create_time, update_time, deleted
@@ -104,6 +105,20 @@ SELECT
     ELT(n % 5 + 1, 'supplier_a', 'supplier_b', 'supplier_c', 'supplier_d', 'supplier_e'),
     CASE WHEN n % 18 = 0 THEN 0 ELSE 1 END,
     CASE WHEN ((n * 3) % 120) < (10 + n % 15) THEN 'below safety stock' ELSE 'normal stock' END,
+    DATE_SUB(NOW(), INTERVAL n DAY),
+    NOW()
+FROM seed_seq;
+
+INSERT INTO service_project_inventory (
+    id, service_project_id, inventory_id, consume_quantity, status, remark, create_time, update_time
+)
+SELECT
+    1000 + n,
+    1000 + n,
+    1000 + ((n * 7) % 100) + 1,
+    1 + n % 3,
+    CASE WHEN n % 16 = 0 THEN 0 ELSE 1 END,
+    'seed service project inventory',
     DATE_SUB(NOW(), INTERVAL n DAY),
     NOW()
 FROM seed_seq;
@@ -246,6 +261,7 @@ UNION ALL SELECT 'staff_member', COUNT(*) FROM staff_member WHERE id BETWEEN 100
 UNION ALL SELECT 'customer_profile', COUNT(*) FROM customer_profile WHERE id BETWEEN 1001 AND 1100
 UNION ALL SELECT 'service_project', COUNT(*) FROM service_project WHERE id BETWEEN 1001 AND 1100
 UNION ALL SELECT 'inventory_sku', COUNT(*) FROM inventory_sku WHERE id BETWEEN 1001 AND 1100
+UNION ALL SELECT 'service_project_inventory', COUNT(*) FROM service_project_inventory WHERE id BETWEEN 1001 AND 1100
 UNION ALL SELECT 'appointment', COUNT(*) FROM appointment WHERE id BETWEEN 1001 AND 1100
 UNION ALL SELECT 'appointment_item', COUNT(*) FROM appointment_item WHERE id BETWEEN 1001 AND 1100
 UNION ALL SELECT 'service_order', COUNT(*) FROM service_order WHERE id BETWEEN 1001 AND 1100

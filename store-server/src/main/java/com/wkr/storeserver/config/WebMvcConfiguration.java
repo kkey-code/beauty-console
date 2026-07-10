@@ -1,22 +1,25 @@
 package com.wkr.storeserver.config;
 
-import com.wkr.storecommon.properties.JwtProperties;
 import com.wkr.storeserver.interceptor.JwtTokenInterceptor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+/**
+ * Web MVC 配置，注册管理端 JWT 拦截器并放行登录接口。
+ */
 @Configuration
 public class WebMvcConfiguration implements WebMvcConfigurer {
 
-    @Autowired
-    private JwtProperties jwtProperties;
+    private final JwtTokenInterceptor jwtTokenInterceptor;
+
+    public WebMvcConfiguration(JwtTokenInterceptor jwtTokenInterceptor) {
+        this.jwtTokenInterceptor = jwtTokenInterceptor;
+    }
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new JwtTokenInterceptor(jwtProperties))
+        registry.addInterceptor(jwtTokenInterceptor)
                 .addPathPatterns("/admin/**")
                 .excludePathPatterns("/admin/users/login");
     }

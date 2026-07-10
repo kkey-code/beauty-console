@@ -30,6 +30,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
 
+/**
+ * 系统用户接口控制器，负责接收管理端请求、校验参数并调用服务层完成业务处理。
+ */
 @Slf4j
 @RestController
 @RequestMapping("/admin/users")

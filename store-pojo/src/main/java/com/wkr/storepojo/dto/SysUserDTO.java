@@ -2,6 +2,8 @@ package com.wkr.storepojo.dto;
 
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -9,6 +11,9 @@ import lombok.Data;
 
 import java.io.Serializable;
 
+/**
+ * 系统用户请求参数，承载新增或修改接口的数据并声明输入校验规则。
+ */
 @Data
 @ApiModel(value = "SysUserDTO", description = "用户账号保存参数")
 public class SysUserDTO implements Serializable {
@@ -28,7 +33,9 @@ public class SysUserDTO implements Serializable {
     private String passwordHash;
 
     @NotNull(message = "角色不能为空")
-    @ApiModelProperty("角色ID：0只读，1管理员，2员工")
+    @Min(value = 1, message = "角色ID必须在1到6之间")
+    @Max(value = 6, message = "角色ID必须在1到6之间")
+    @ApiModelProperty("角色ID：1超级管理员，2店长，3普通员工，4库存管理员，5财务/收银，6只读")
     private Integer roleId;
 
     @ApiModelProperty("关联员工ID")
