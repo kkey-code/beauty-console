@@ -97,7 +97,7 @@ public class JwtTokenInterceptor implements HandlerInterceptor {
             BaseContext.setCurrentUser(userId, currentUser.getStaffId(), currentRole.getCode(), currentRole.getRoleCode());
 
             String requestPath = requestPath(request);
-            if (!rolePermissionChecker.isAllowed(currentRole, request.getMethod(), requestPath)) {
+            if (!rolePermissionChecker.isAllowed(currentRole, userId, request.getMethod(), requestPath)) {
                 BaseContext.remove();
                 return reject(response, HttpServletResponse.SC_FORBIDDEN, "无权限访问该接口");
             }

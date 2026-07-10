@@ -19,11 +19,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -41,6 +44,9 @@ class SysUserServiceImplLoginTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private PermissionPointService permissionPointService;
+
     private SysUserServiceImpl service;
 
     @BeforeEach
@@ -49,7 +55,7 @@ class SysUserServiceImplLoginTest {
         properties.setAdminSecretKey(SECRET);
         properties.setAdminTtl(7_200_000L);
         properties.setAdminTokenName("token");
-        service = new SysUserServiceImpl(sysUserMapper, properties, passwordEncoder);
+        service = new SysUserServiceImpl(sysUserMapper, properties, passwordEncoder, permissionPointService);
     }
 
     @Test
@@ -58,6 +64,8 @@ class SysUserServiceImplLoginTest {
         when(sysUserMapper.loginByName("staff")).thenReturn(user);
         when(passwordEncoder.matches("123456", user.getPassword())).thenReturn(true);
         when(sysUserMapper.updateById(any(SysUser.class))).thenReturn(1);
+        when(permissionPointService.listEffectiveCodes(anyLong(), any(RoleEnum.class)))
+                .thenReturn(List.of("dashboard:view", "appointments:view"));
 
         LoginUserVO result = service.login(loginDto("staff"));
 
@@ -71,6 +79,7 @@ class SysUserServiceImplLoginTest {
         assertNull(result.getPassword());
         assertEquals(RoleEnum.STAFF.getRoleCode(), result.getRoleCode());
         assertEquals(RoleEnum.STAFF.getDescription(), result.getRoleName());
+        assertEquals(List.of("dashboard:view", "appointments:view"), result.getPermissions());
 
         Claims claims = JwtUtils.parseJWT(SECRET, result.getToken());
         assertEquals(RoleEnum.STAFF.getCode(), Integer.valueOf(claims.get(JwtClaimsConstant.ROLE_ID).toString()));

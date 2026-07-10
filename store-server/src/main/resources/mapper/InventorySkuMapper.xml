@@ -4,4 +4,11 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.wkr.storeserver.mapper.InventorySkuMapper">
 
+    <update id="updateQuantityIfUnchanged">
+        UPDATE inventory_sku
+        SET quantity = #{afterQuantity},
+            update_time = NOW()
+        WHERE id = #{id}
+          AND quantity = #{beforeQuantity}
+    </update>
 </mapper>

@@ -25,15 +25,18 @@ import com.wkr.storepojo.entity.SysUser;
 import com.wkr.storepojo.vo.AppointmentVO;
 import com.wkr.storepojo.vo.LoginUserVO;
 import com.wkr.storepojo.vo.PaymentRecordVO;
+import com.wkr.storepojo.vo.PermissionPointVO;
 import com.wkr.storepojo.vo.ServiceOrderItemVO;
 import com.wkr.storepojo.vo.ServiceOrderVO;
 import com.wkr.storepojo.vo.SysUserVO;
+import com.wkr.storepojo.vo.UserPermissionVO;
 import com.wkr.storeserver.controller.AppointmentController;
 import com.wkr.storeserver.controller.AppointmentItemController;
 import com.wkr.storeserver.controller.CustomerProfileController;
 import com.wkr.storeserver.controller.InventorySkuController;
 import com.wkr.storeserver.controller.InventoryStockLogController;
 import com.wkr.storeserver.controller.PaymentRecordController;
+import com.wkr.storeserver.controller.PermissionController;
 import com.wkr.storeserver.controller.ServiceOrderController;
 import com.wkr.storeserver.controller.ServiceOrderItemController;
 import com.wkr.storeserver.controller.ServiceProjectController;
@@ -47,6 +50,7 @@ import com.wkr.storeserver.service.CustomerProfileService;
 import com.wkr.storeserver.service.InventorySkuService;
 import com.wkr.storeserver.service.InventoryStockLogService;
 import com.wkr.storeserver.service.PaymentRecordService;
+import com.wkr.storeserver.service.PermissionPointService;
 import com.wkr.storeserver.service.ServiceOrderItemService;
 import com.wkr.storeserver.service.ServiceOrderService;
 import com.wkr.storeserver.service.ServiceProjectService;
@@ -96,6 +100,8 @@ class ControllerApiUnitTest {
     @Mock
     private SysUserService sysUserService;
     @Mock
+    private PermissionPointService permissionPointService;
+    @Mock
     private PasswordEncoder passwordEncoder;
     @Mock
     private StaffMemberService staffMemberService;
@@ -123,7 +129,8 @@ class ControllerApiUnitTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(
-                        new SysUserController(sysUserService, passwordEncoder),
+                        new SysUserController(sysUserService, passwordEncoder, permissionPointService),
+                        new PermissionController(permissionPointService),
                         new StaffMemberController(staffMemberService),
                         new ServiceProjectController(serviceProjectService),
                         new ServiceProjectInventoryController(
@@ -157,9 +164,17 @@ class ControllerApiUnitTest {
                 .andExpect(okWithCodeOne());
         mockMvc.perform(get("/admin/users/1"))
                 .andExpect(okWithCodeOne());
+        mockMvc.perform(get("/admin/users/1/permissions"))
+                .andExpect(okWithCodeOne());
         mockMvc.perform(post("/admin/users").contentType(MediaType.APPLICATION_JSON).content(sysUserJson()))
                 .andExpect(okWithCodeOne());
         mockMvc.perform(put("/admin/users/1").contentType(MediaType.APPLICATION_JSON).content(sysUserJson()))
+                .andExpect(okWithCodeOne());
+        mockMvc.perform(put("/admin/users/1/permissions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"permissionCodes":["dashboard:view","customers:view"]}
+                                """))
                 .andExpect(okWithCodeOne());
         mockMvc.perform(patch("/admin/users/1/status")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -168,6 +183,8 @@ class ControllerApiUnitTest {
                                 """))
                 .andExpect(okWithCodeOne());
         mockMvc.perform(delete("/admin/users/1"))
+                .andExpect(okWithCodeOne());
+        mockMvc.perform(get("/admin/permissions"))
                 .andExpect(okWithCodeOne());
     }
 
@@ -355,6 +372,8 @@ class ControllerApiUnitTest {
         when(sysUserService.page(any(SysUserPageQueryDTO.class))).thenReturn(pageResult(sysUserVO()));
         when(sysUserService.getByID(anyLong())).thenReturn(sysUserVO());
         when(sysUserService.getById(anyLong())).thenReturn(sysUser());
+        when(permissionPointService.listPermissionPoints()).thenReturn(List.of(new PermissionPointVO()));
+        when(permissionPointService.getUserPermissions(anyLong())).thenReturn(new UserPermissionVO());
 
         when(appointmentService.List(any(AppointmentPageQueryDTO.class))).thenReturn(Result.success(pageResult(new AppointmentVO())));
         when(appointmentService.getByID(anyLong())).thenReturn(new AppointmentVO());

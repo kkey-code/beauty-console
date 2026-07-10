@@ -2,6 +2,9 @@ package com.wkr.storeserver.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.wkr.storepojo.entity.InventorySku;
+import org.apache.ibatis.annotations.Param;
+
+import java.math.BigDecimal;
 
 /**
 * @author kkey
@@ -11,6 +14,10 @@ import com.wkr.storepojo.entity.InventorySku;
 */
 public interface InventorySkuMapper extends BaseMapper<InventorySku> {
 
+    int updateQuantityIfUnchanged(
+            @Param("id") Long id,
+            @Param("beforeQuantity") BigDecimal beforeQuantity,
+            @Param("afterQuantity") BigDecimal afterQuantity);
 }
 
 

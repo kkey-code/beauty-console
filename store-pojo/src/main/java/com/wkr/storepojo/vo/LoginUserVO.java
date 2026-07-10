@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * 登录用户响应对象，组合接口返回给前端展示的业务字段。
@@ -45,4 +46,7 @@ public class LoginUserVO implements Serializable {
 
     @ApiModelProperty("角色编码")
     private String roleCode;
+
+    @ApiModelProperty("当前账号生效权限点")
+    private List<String> permissions;
 }

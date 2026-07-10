@@ -15,6 +15,7 @@ import com.wkr.storepojo.enums.RoleEnum;
 import com.wkr.storepojo.vo.LoginUserVO;
 import com.wkr.storepojo.vo.SysUserVO;
 import com.wkr.storeserver.mapper.SysUserMapper;
+import com.wkr.storeserver.service.PermissionPointService;
 import com.wkr.storeserver.service.SysUserService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -33,14 +34,17 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     private final SysUserMapper sysUserMapper;
     private final JwtProperties jwtProperties;
     private final PasswordEncoder passwordEncoder;
+    private final PermissionPointService permissionPointService;
 
     public SysUserServiceImpl(
             SysUserMapper sysUserMapper,
             JwtProperties jwtProperties,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            PermissionPointService permissionPointService) {
         this.sysUserMapper = sysUserMapper;
         this.jwtProperties = jwtProperties;
         this.passwordEncoder = passwordEncoder;
+        this.permissionPointService = permissionPointService;
     }
 
     @Override
@@ -57,6 +61,9 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         }
 
         fillLoginUserDisplayFields(loginUserVO);
+        loginUserVO.setPermissions(permissionPointService.listEffectiveCodes(
+                loginUserVO.getId(),
+                RoleEnum.fromCode(loginUserVO.getRoleId())));
 
         Map<String, Object> claims = new HashMap<>();
         claims.put(JwtClaimsConstant.USERNAME, loginUserVO.getUsername());

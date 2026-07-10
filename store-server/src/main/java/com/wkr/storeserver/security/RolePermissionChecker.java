@@ -1,15 +1,14 @@
 package com.wkr.storeserver.security;
 
 import com.wkr.storepojo.enums.RoleEnum;
+import com.wkr.storeserver.service.PermissionPointService;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-/**
- * 角色权限检查器，按照角色、HTTP 方法和接口路径判断当前请求是否允许执行。
- */
 @Component
 public class RolePermissionChecker {
 
@@ -32,29 +31,64 @@ public class RolePermissionChecker {
             "/admin/service-orders",
             "/admin/service-order-items");
 
+    private final PermissionPointService permissionPointService;
+    private final AntPathMatcher pathMatcher = new AntPathMatcher();
+
+    public RolePermissionChecker() {
+        this.permissionPointService = null;
+    }
+
+    public RolePermissionChecker(PermissionPointService permissionPointService) {
+        this.permissionPointService = permissionPointService;
+    }
+
     public boolean isAllowed(RoleEnum role, String method, String path) {
+        return isAllowed(role, null, method, path);
+    }
+
+    public boolean isAllowed(RoleEnum role, Long userId, String method, String path) {
         if (role == null || method == null || path == null) {
             return false;
         }
-        String normalizedMethod = method.toUpperCase(Locale.ROOT);
 
-        if (role == RoleEnum.SUPER_ADMIN || role == RoleEnum.STORE_MANAGER) {
+        String normalizedMethod = method.toUpperCase(Locale.ROOT);
+        if (role == RoleEnum.SUPER_ADMIN) {
             return true;
         }
 
-        boolean readRequest = isReadRequest(normalizedMethod);
+        if (permissionPointService != null) {
+            try {
+                if (permissionPointService.isPermissionModelReady()) {
+                    return permissionPointService.listEffectiveRules(userId, role).stream()
+                            .anyMatch(rule -> methodMatches(rule.method(), normalizedMethod)
+                                    && pathMatches(rule.pathPattern(), path));
+                }
+            } catch (RuntimeException ignored) {
+                // Keep the legacy matrix as a fallback before the SQL patch has been applied.
+            }
+        }
+
+        return isAllowedByLegacyMatrix(role, normalizedMethod, path);
+    }
+
+    private boolean isAllowedByLegacyMatrix(RoleEnum role, String method, String path) {
+        if (role == RoleEnum.STORE_MANAGER) {
+            return true;
+        }
+
+        boolean readRequest = isReadRequest(method);
         if (role == RoleEnum.READONLY) {
             return readRequest;
         }
         if (role == RoleEnum.INVENTORY_ADMIN) {
-            return isInventoryAllowed(normalizedMethod, path);
+            return isInventoryAllowed(method, path);
         }
         if (role == RoleEnum.FINANCE) {
-            return isPaymentWrite(normalizedMethod, path)
+            return isPaymentWrite(method, path)
                     || readRequest && matchesAny(path, FINANCE_READ_PATHS);
         }
         if (role == RoleEnum.STAFF) {
-            return isStaffBusinessAllowed(normalizedMethod, path)
+            return isStaffBusinessAllowed(method, path)
                     || readRequest && matchesPath(path, "/admin/service-projects");
         }
         return false;
@@ -83,6 +117,30 @@ public class RolePermissionChecker {
             return false;
         }
         return isReadRequest(method) || Set.of("POST", "PATCH").contains(method);
+    }
+
+    private boolean methodMatches(String ruleMethod, String requestMethod) {
+        if (ruleMethod == null) {
+            return false;
+        }
+        String normalizedRuleMethod = ruleMethod.toUpperCase(Locale.ROOT);
+        return "*".equals(normalizedRuleMethod)
+                || normalizedRuleMethod.equals(requestMethod)
+                || ("GET".equals(normalizedRuleMethod) && "HEAD".equals(requestMethod));
+    }
+
+    private boolean pathMatches(String pattern, String path) {
+        if (pattern == null) {
+            return false;
+        }
+        if (pathMatcher.match(pattern, path)) {
+            return true;
+        }
+        if (pattern.endsWith("/**")) {
+            String basePath = pattern.substring(0, pattern.length() - 3);
+            return path.equals(basePath) || path.startsWith(basePath + "/");
+        }
+        return false;
     }
 
     private boolean matchesAny(String path, List<String> prefixes) {

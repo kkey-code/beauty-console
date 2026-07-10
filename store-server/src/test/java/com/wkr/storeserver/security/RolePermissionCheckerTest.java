@@ -1,10 +1,15 @@
 package com.wkr.storeserver.security;
 
 import com.wkr.storepojo.enums.RoleEnum;
+import com.wkr.storeserver.service.PermissionPointService;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * 角色权限矩阵测试，验证六类角色在不同接口和请求方法上的允许与拒绝规则。
@@ -62,5 +67,19 @@ class RolePermissionCheckerTest {
     void nonAdministrativeRolesAreDeniedUnknownPaths() {
         assertFalse(checker.isAllowed(RoleEnum.STAFF, "GET", "/admin/unknown"));
         assertFalse(checker.isAllowed(null, "GET", "/admin/customers"));
+    }
+
+    @Test
+    void databasePermissionRulesOverrideLegacyRoleMatrix() {
+        PermissionPointService permissionPointService = mock(PermissionPointService.class);
+        when(permissionPointService.isPermissionModelReady()).thenReturn(true);
+        when(permissionPointService.listEffectiveRules(1001L, RoleEnum.STAFF)).thenReturn(List.of(
+                new PermissionRule("GET", "/admin/customers/**")
+        ));
+
+        RolePermissionChecker dbChecker = new RolePermissionChecker(permissionPointService);
+
+        assertTrue(dbChecker.isAllowed(RoleEnum.STAFF, 1001L, "GET", "/admin/customers/1"));
+        assertFalse(dbChecker.isAllowed(RoleEnum.STAFF, 1001L, "POST", "/admin/customers"));
     }
 }

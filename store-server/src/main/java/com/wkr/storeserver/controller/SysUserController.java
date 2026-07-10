@@ -9,9 +9,12 @@ import com.wkr.storepojo.dto.SysUserDTO;
 import com.wkr.storepojo.dto.SysUserLoginDTO;
 import com.wkr.storepojo.dto.SysUserPageQueryDTO;
 import com.wkr.storepojo.dto.SysUserStatusDTO;
+import com.wkr.storepojo.dto.UserPermissionDTO;
 import com.wkr.storepojo.entity.SysUser;
 import com.wkr.storepojo.vo.LoginUserVO;
 import com.wkr.storepojo.vo.SysUserVO;
+import com.wkr.storepojo.vo.UserPermissionVO;
+import com.wkr.storeserver.service.PermissionPointService;
 import com.wkr.storeserver.service.SysUserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -44,10 +47,15 @@ public class SysUserController {
 
     private final SysUserService sysUserService;
     private final PasswordEncoder passwordEncoder;
+    private final PermissionPointService permissionPointService;
 
-    public SysUserController(SysUserService sysUserService, PasswordEncoder passwordEncoder) {
+    public SysUserController(
+            SysUserService sysUserService,
+            PasswordEncoder passwordEncoder,
+            PermissionPointService permissionPointService) {
         this.sysUserService = sysUserService;
         this.passwordEncoder = passwordEncoder;
+        this.permissionPointService = permissionPointService;
     }
 
     @PostMapping("/login")
@@ -66,6 +74,21 @@ public class SysUserController {
     @ApiOperation("根据用户 id 查询用户")
     public Result<SysUserVO> getById(@PathVariable("id") Long id) {
         return Result.success(sysUserService.getByID(id));
+    }
+
+    @GetMapping("/{id}/permissions")
+    @ApiOperation("查询用户权限点")
+    public Result<UserPermissionVO> getPermissions(@PathVariable("id") Long id) {
+        return Result.success(permissionPointService.getUserPermissions(id));
+    }
+
+    @PutMapping("/{id}/permissions")
+    @ApiOperation("保存用户权限点")
+    public Result<?> updatePermissions(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody UserPermissionDTO userPermissionDTO) {
+        permissionPointService.updateUserPermissions(id, userPermissionDTO);
+        return Result.success();
     }
 
     @PostMapping

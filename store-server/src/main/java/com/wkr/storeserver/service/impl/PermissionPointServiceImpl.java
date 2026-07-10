@@ -1,0 +1,212 @@
+package com.wkr.storeserver.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.wkr.storecommon.exception.BusinessException;
+import com.wkr.storepojo.dto.UserPermissionDTO;
+import com.wkr.storepojo.entity.SysPermission;
+import com.wkr.storepojo.entity.SysRolePermission;
+import com.wkr.storepojo.entity.SysUser;
+import com.wkr.storepojo.entity.SysUserPermission;
+import com.wkr.storepojo.enums.RoleEnum;
+import com.wkr.storepojo.vo.PermissionPointVO;
+import com.wkr.storepojo.vo.UserPermissionVO;
+import com.wkr.storeserver.mapper.SysPermissionMapper;
+import com.wkr.storeserver.mapper.SysRolePermissionMapper;
+import com.wkr.storeserver.mapper.SysUserMapper;
+import com.wkr.storeserver.mapper.SysUserPermissionMapper;
+import com.wkr.storeserver.security.PermissionRule;
+import com.wkr.storeserver.service.PermissionPointService;
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@Service
+public class PermissionPointServiceImpl extends ServiceImpl<SysPermissionMapper, SysPermission>
+        implements PermissionPointService {
+
+    private static final int ENABLED = 1;
+
+    private final SysPermissionMapper sysPermissionMapper;
+    private final SysRolePermissionMapper sysRolePermissionMapper;
+    private final SysUserPermissionMapper sysUserPermissionMapper;
+    private final SysUserMapper sysUserMapper;
+
+    public PermissionPointServiceImpl(
+            SysPermissionMapper sysPermissionMapper,
+            SysRolePermissionMapper sysRolePermissionMapper,
+            SysUserPermissionMapper sysUserPermissionMapper,
+            SysUserMapper sysUserMapper) {
+        this.sysPermissionMapper = sysPermissionMapper;
+        this.sysRolePermissionMapper = sysRolePermissionMapper;
+        this.sysUserPermissionMapper = sysUserPermissionMapper;
+        this.sysUserMapper = sysUserMapper;
+    }
+
+    @Override
+    public boolean isPermissionModelReady() {
+        try {
+            return sysPermissionMapper.selectCount(activePermissionWrapper()) > 0;
+        } catch (RuntimeException ex) {
+            return false;
+        }
+    }
+
+    @Override
+    public List<String> listEffectiveCodes(Long userId, RoleEnum role) {
+        try {
+            return listEffectivePermissions(userId, role).stream()
+                    .map(SysPermission::getPermissionCode)
+                    .filter(StringUtils::hasText)
+                    .distinct()
+                    .collect(Collectors.toList());
+        } catch (RuntimeException ex) {
+            return List.of();
+        }
+    }
+
+    @Override
+    public List<PermissionRule> listEffectiveRules(Long userId, RoleEnum role) {
+        return listEffectivePermissions(userId, role).stream()
+                .filter(item -> StringUtils.hasText(item.getMethod()) && StringUtils.hasText(item.getPathPattern()))
+                .map(item -> new PermissionRule(item.getMethod(), item.getPathPattern()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<PermissionPointVO> listPermissionPoints() {
+        return listAllActivePermissions().stream()
+                .map(this::toPermissionPointVO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public UserPermissionVO getUserPermissions(Long userId) {
+        SysUser user = requireUser(userId);
+        RoleEnum role = RoleEnum.fromCode(user.getRoleId());
+
+        UserPermissionVO vo = new UserPermissionVO();
+        vo.setUserId(userId);
+        vo.setCustomized(hasUserPermissionOverride(userId));
+        vo.setPermissionCodes(listEffectiveCodes(userId, role));
+        vo.setAllPermissions(listPermissionPoints());
+        return vo;
+    }
+
+    @Override
+    @Transactional
+    public void updateUserPermissions(Long userId, UserPermissionDTO dto) {
+        requireUser(userId);
+        if (dto == null || dto.getPermissionCodes() == null) {
+            throw new BusinessException("权限点不能为空");
+        }
+
+        sysUserPermissionMapper.delete(new LambdaQueryWrapper<SysUserPermission>()
+                .eq(SysUserPermission::getUserId, userId));
+
+        Set<String> permissionCodes = dto.getPermissionCodes().stream()
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (permissionCodes.isEmpty()) {
+            return;
+        }
+
+        List<SysPermission> permissions = sysPermissionMapper.selectList(
+                activePermissionWrapper().in(SysPermission::getPermissionCode, permissionCodes));
+        if (permissions.size() != permissionCodes.size()) {
+            throw new BusinessException("权限点不存在或已停用");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        for (SysPermission permission : permissions) {
+            SysUserPermission userPermission = new SysUserPermission();
+            userPermission.setUserId(userId);
+            userPermission.setPermissionId(permission.getId());
+            userPermission.setCreateTime(now);
+            sysUserPermissionMapper.insert(userPermission);
+        }
+    }
+
+    private List<SysPermission> listEffectivePermissions(Long userId, RoleEnum role) {
+        if (role == null) {
+            return List.of();
+        }
+        if (role == RoleEnum.SUPER_ADMIN) {
+            return listAllActivePermissions();
+        }
+        if (userId != null && hasUserPermissionOverride(userId)) {
+            return listUserPermissions(userId);
+        }
+        return listRolePermissions(role);
+    }
+
+    private boolean hasUserPermissionOverride(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+        return sysUserPermissionMapper.selectCount(new LambdaQueryWrapper<SysUserPermission>()
+                .eq(SysUserPermission::getUserId, userId)) > 0;
+    }
+
+    private List<SysPermission> listAllActivePermissions() {
+        return sysPermissionMapper.selectList(activePermissionWrapper()
+                .orderByAsc(SysPermission::getPermissionGroup)
+                .orderByAsc(SysPermission::getId));
+    }
+
+    private List<SysPermission> listUserPermissions(Long userId) {
+        List<SysUserPermission> relations = sysUserPermissionMapper.selectList(
+                new LambdaQueryWrapper<SysUserPermission>().eq(SysUserPermission::getUserId, userId));
+        return listPermissionsByIds(relations.stream()
+                .map(SysUserPermission::getPermissionId)
+                .collect(Collectors.toList()));
+    }
+
+    private List<SysPermission> listRolePermissions(RoleEnum role) {
+        List<SysRolePermission> relations = sysRolePermissionMapper.selectList(
+                new LambdaQueryWrapper<SysRolePermission>().eq(SysRolePermission::getRoleId, role.getCode()));
+        return listPermissionsByIds(relations.stream()
+                .map(SysRolePermission::getPermissionId)
+                .collect(Collectors.toList()));
+    }
+
+    private List<SysPermission> listPermissionsByIds(List<Long> permissionIds) {
+        if (permissionIds == null || permissionIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return sysPermissionMapper.selectList(activePermissionWrapper()
+                .in(SysPermission::getId, permissionIds)
+                .orderByAsc(SysPermission::getPermissionGroup)
+                .orderByAsc(SysPermission::getId));
+    }
+
+    private LambdaQueryWrapper<SysPermission> activePermissionWrapper() {
+        return new LambdaQueryWrapper<SysPermission>().eq(SysPermission::getStatus, ENABLED);
+    }
+
+    private SysUser requireUser(Long userId) {
+        if (userId == null) {
+            throw new BusinessException("用户ID不能为空");
+        }
+        SysUser user = sysUserMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+        return user;
+    }
+
+    private PermissionPointVO toPermissionPointVO(SysPermission permission) {
+        PermissionPointVO vo = new PermissionPointVO();
+        BeanUtils.copyProperties(permission, vo);
+        return vo;
+    }
+}
