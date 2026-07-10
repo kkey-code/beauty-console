@@ -34,6 +34,7 @@ public class PermissionPointServiceImpl extends ServiceImpl<SysPermissionMapper,
         implements PermissionPointService {
 
     private static final int ENABLED = 1;
+    private static final long EMPTY_OVERRIDE_PERMISSION_ID = 0L;
 
     private final SysPermissionMapper sysPermissionMapper;
     private final SysRolePermissionMapper sysRolePermissionMapper;
@@ -97,6 +98,7 @@ public class PermissionPointServiceImpl extends ServiceImpl<SysPermissionMapper,
         vo.setUserId(userId);
         vo.setCustomized(hasUserPermissionOverride(userId));
         vo.setPermissionCodes(listEffectiveCodes(userId, role));
+        vo.setRolePermissionCodes(listRoleDefaultCodes(role));
         vo.setAllPermissions(listPermissionPoints());
         return vo;
     }
@@ -112,11 +114,16 @@ public class PermissionPointServiceImpl extends ServiceImpl<SysPermissionMapper,
         sysUserPermissionMapper.delete(new LambdaQueryWrapper<SysUserPermission>()
                 .eq(SysUserPermission::getUserId, userId));
 
+        if (Boolean.TRUE.equals(dto.getUseRoleDefault())) {
+            return;
+        }
+
         Set<String> permissionCodes = dto.getPermissionCodes().stream()
                 .filter(StringUtils::hasText)
                 .map(String::trim)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         if (permissionCodes.isEmpty()) {
+            saveUserPermission(userId, EMPTY_OVERRIDE_PERMISSION_ID, LocalDateTime.now());
             return;
         }
 
@@ -128,11 +135,7 @@ public class PermissionPointServiceImpl extends ServiceImpl<SysPermissionMapper,
 
         LocalDateTime now = LocalDateTime.now();
         for (SysPermission permission : permissions) {
-            SysUserPermission userPermission = new SysUserPermission();
-            userPermission.setUserId(userId);
-            userPermission.setPermissionId(permission.getId());
-            userPermission.setCreateTime(now);
-            sysUserPermissionMapper.insert(userPermission);
+            saveUserPermission(userId, permission.getId(), now);
         }
     }
 
@@ -147,6 +150,20 @@ public class PermissionPointServiceImpl extends ServiceImpl<SysPermissionMapper,
             return listUserPermissions(userId);
         }
         return listRolePermissions(role);
+    }
+
+    private List<String> listRoleDefaultCodes(RoleEnum role) {
+        if (role == null) {
+            return List.of();
+        }
+        List<SysPermission> permissions = role == RoleEnum.SUPER_ADMIN
+                ? listAllActivePermissions()
+                : listRolePermissions(role);
+        return permissions.stream()
+                .map(SysPermission::getPermissionCode)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .collect(Collectors.toList());
     }
 
     private boolean hasUserPermissionOverride(Long userId) {
@@ -202,6 +219,14 @@ public class PermissionPointServiceImpl extends ServiceImpl<SysPermissionMapper,
             throw new BusinessException("用户不存在");
         }
         return user;
+    }
+
+    private void saveUserPermission(Long userId, Long permissionId, LocalDateTime createTime) {
+        SysUserPermission userPermission = new SysUserPermission();
+        userPermission.setUserId(userId);
+        userPermission.setPermissionId(permissionId);
+        userPermission.setCreateTime(createTime);
+        sysUserPermissionMapper.insert(userPermission);
     }
 
     private PermissionPointVO toPermissionPointVO(SysPermission permission) {

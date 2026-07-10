@@ -25,6 +25,9 @@ public class UserPermissionVO implements Serializable {
     @ApiModelProperty("当前生效权限编码")
     private List<String> permissionCodes;
 
+    @ApiModelProperty("当前角色默认权限编码")
+    private List<String> rolePermissionCodes;
+
     @ApiModelProperty("全部可选权限点")
     private List<PermissionPointVO> allPermissions;
 }
