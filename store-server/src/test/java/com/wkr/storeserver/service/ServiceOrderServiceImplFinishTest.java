@@ -61,6 +61,15 @@ class ServiceOrderServiceImplFinishTest {
     @Mock
     private InventoryStockLogService inventoryStockLogService;
 
+    @Mock
+    private CustomerProfileService customerProfileService;
+
+    @Mock
+    private AppointmentService appointmentService;
+
+    @Mock
+    private AppointmentItemService appointmentItemService;
+
     private ServiceOrderServiceImpl service;
 
     @BeforeEach
@@ -71,7 +80,10 @@ class ServiceOrderServiceImplFinishTest {
                 paymentRecordService,
                 staffMemberService,
                 serviceProjectInventoryService,
-                inventoryStockLogService);
+                inventoryStockLogService,
+                customerProfileService,
+                appointmentService,
+                appointmentItemService);
     }
 
     @Test
@@ -132,6 +144,55 @@ class ServiceOrderServiceImplFinishTest {
     }
 
     @Test
+    void cancelCompletedServiceOrderRollsBackStockOutLogs() {
+        when(serviceOrderMapper.selectOne(any(Wrapper.class))).thenReturn(serviceOrder(OrderStatusEnum.COMPLETED));
+        when(inventoryStockLogService.list(any(Wrapper.class)))
+                .thenReturn(List.of(
+                        stockOutLog(1001L, "3.00"),
+                        stockOutLog(1002L, "4.00"),
+                        stockOutLog(1001L, "1.00")));
+        when(inventoryStockLogService.recordStockChange(any(InventoryStockLogDTO.class), eq("return")))
+                .thenReturn(new InventoryStockLog());
+        when(serviceOrderMapper.updateById(any(ServiceOrder.class))).thenReturn(1);
+
+        boolean result = service.cancel(2001L);
+
+        assertTrue(result);
+
+        ArgumentCaptor<InventoryStockLogDTO> dtoCaptor = ArgumentCaptor.forClass(InventoryStockLogDTO.class);
+        verify(inventoryStockLogService, times(2))
+                .recordStockChange(dtoCaptor.capture(), eq(InventoryChangeTypeEnum.RETURN.getCode()));
+
+        List<InventoryStockLogDTO> dtos = dtoCaptor.getAllValues();
+        assertEquals(1001L, dtos.get(0).getInventoryId());
+        assertEquals(0, new BigDecimal("4.00").compareTo(dtos.get(0).getChangeQuantity()));
+        assertEquals(2001L, dtos.get(0).getRelatedOrderId());
+        assertEquals(InventoryChangeTypeEnum.RETURN.getCode(), dtos.get(0).getChangeType());
+
+        assertEquals(1002L, dtos.get(1).getInventoryId());
+        assertEquals(0, new BigDecimal("4.00").compareTo(dtos.get(1).getChangeQuantity()));
+
+        ArgumentCaptor<ServiceOrder> updateCaptor = ArgumentCaptor.forClass(ServiceOrder.class);
+        verify(serviceOrderMapper).updateById(updateCaptor.capture());
+        assertEquals(OrderStatusEnum.CANCELED.getCode(), updateCaptor.getValue().getOrderStatus());
+    }
+
+    @Test
+    void cancelPendingServiceOrderOnlyChangesStatus() {
+        when(serviceOrderMapper.selectOne(any(Wrapper.class))).thenReturn(serviceOrder(OrderStatusEnum.PENDING));
+        when(serviceOrderMapper.updateById(any(ServiceOrder.class))).thenReturn(1);
+
+        boolean result = service.cancel(2001L);
+
+        assertTrue(result);
+
+        verifyNoInteractions(inventoryStockLogService);
+        ArgumentCaptor<ServiceOrder> updateCaptor = ArgumentCaptor.forClass(ServiceOrder.class);
+        verify(serviceOrderMapper).updateById(updateCaptor.capture());
+        assertEquals(OrderStatusEnum.CANCELED.getCode(), updateCaptor.getValue().getOrderStatus());
+    }
+
+    @Test
     void getOrderItemsBatchLoadsStaffNames() {
         ServiceOrderItem firstItem = orderItem(1);
         firstItem.setStaffId(5001L);
@@ -175,6 +236,15 @@ class ServiceOrderServiceImplFinishTest {
         relation.setConsumeQuantity(new BigDecimal(consumeQuantity));
         relation.setStatus(1);
         return relation;
+    }
+
+    private InventoryStockLog stockOutLog(Long inventoryId, String quantity) {
+        InventoryStockLog log = new InventoryStockLog();
+        log.setInventoryId(inventoryId);
+        log.setChangeType(InventoryChangeTypeEnum.STOCK_OUT.getCode());
+        log.setChangeQuantity(new BigDecimal(quantity));
+        log.setRelatedOrderId(2001L);
+        return log;
     }
 
     private StaffMember staffMember(Long id, String name) {

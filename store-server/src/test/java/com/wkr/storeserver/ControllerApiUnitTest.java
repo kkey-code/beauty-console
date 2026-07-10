@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.wkr.storecommon.common.PageResult;
 import com.wkr.storecommon.common.Result;
 import com.wkr.storepojo.dto.AppointmentPageQueryDTO;
+import com.wkr.storepojo.dto.ServiceOrderDTO;
+import com.wkr.storepojo.dto.ServiceOrderPageQueryDTO;
 import com.wkr.storepojo.dto.SysUserLoginDTO;
 import com.wkr.storepojo.dto.SysUserPageQueryDTO;
 import com.wkr.storepojo.entity.Appointment;
@@ -24,6 +26,7 @@ import com.wkr.storepojo.vo.AppointmentVO;
 import com.wkr.storepojo.vo.LoginUserVO;
 import com.wkr.storepojo.vo.PaymentRecordVO;
 import com.wkr.storepojo.vo.ServiceOrderItemVO;
+import com.wkr.storepojo.vo.ServiceOrderVO;
 import com.wkr.storepojo.vo.SysUserVO;
 import com.wkr.storeserver.controller.AppointmentController;
 import com.wkr.storeserver.controller.AppointmentItemController;
@@ -128,12 +131,7 @@ class ControllerApiUnitTest {
                                 serviceProjectService,
                                 inventorySkuService),
                         new ServiceOrderItemController(serviceOrderItemService, staffMemberService),
-                        new ServiceOrderController(
-                                serviceOrderService,
-                                customerProfileService,
-                                serviceOrderItemService,
-                                appointmentService,
-                                appointmentItemService),
+                        new ServiceOrderController(serviceOrderService),
                         new PaymentRecordController(paymentRecordService, serviceOrderService),
                         new InventoryStockLogController(inventoryStockLogService, inventorySkuService),
                         new InventorySkuController(inventorySkuService),
@@ -369,6 +367,7 @@ class ControllerApiUnitTest {
         when(inventoryStockLogService.page(any(Page.class), any(Wrapper.class))).thenReturn(pageOf(stockLog("stock_in")));
         when(paymentRecordService.page(any(Page.class), any(Wrapper.class))).thenReturn(pageOf(paymentRecord(1)));
         when(serviceOrderService.page(any(Page.class), any(Wrapper.class))).thenReturn(pageOf(serviceOrder()));
+        when(serviceOrderService.pageOrders(any(ServiceOrderPageQueryDTO.class))).thenReturn(pageResult(serviceOrderVO()));
 
         when(staffMemberService.getById(anyLong())).thenAnswer(invocation -> staffMember());
         when(serviceProjectService.getById(anyLong())).thenAnswer(invocation -> serviceProject());
@@ -380,6 +379,7 @@ class ControllerApiUnitTest {
         when(inventoryStockLogService.recordStockChange(any(), any())).thenAnswer(invocation -> stockLog("stock_in"));
         when(paymentRecordService.getById(anyLong())).thenReturn(paymentRecord(1), paymentRecord(0), paymentRecord(0));
         when(serviceOrderService.getById(anyLong())).thenAnswer(invocation -> serviceOrder());
+        when(serviceOrderService.getDetail(anyLong())).thenReturn(serviceOrderVO());
         when(appointmentService.getById(anyLong())).thenAnswer(invocation -> appointment());
 
         when(appointmentItemService.list(any(Wrapper.class))).thenReturn(List.of(appointmentItem()));
@@ -392,7 +392,12 @@ class ControllerApiUnitTest {
         when(inventorySkuService.count(any(Wrapper.class))).thenReturn(1L);
         when(serviceOrderService.getOrderItemsByOrderId(anyLong())).thenReturn(List.of(new ServiceOrderItemVO()));
         when(serviceOrderService.getPaymentRecordByOrderId(anyLong())).thenReturn(List.of(new PaymentRecordVO()));
+        when(serviceOrderService.createOrder(any(ServiceOrderDTO.class))).thenReturn(1L);
+        when(serviceOrderService.createFromAppointment(anyLong())).thenReturn(1L);
+        when(serviceOrderService.updateOrder(anyLong(), any(ServiceOrderDTO.class))).thenReturn(true);
+        when(serviceOrderService.cancel(anyLong())).thenReturn(true);
         when(serviceOrderService.finish(anyLong())).thenReturn(true);
+        when(serviceOrderService.deleteOrder(anyLong())).thenReturn(true);
 
         stubSave(sysUserService);
         stubSave(staffMemberService);
@@ -578,6 +583,24 @@ class ControllerApiUnitTest {
         entity.setPayStatus(0);
         entity.setOrderStatus(0);
         return entity;
+    }
+
+    private ServiceOrderVO serviceOrderVO() {
+        ServiceOrderVO vo = new ServiceOrderVO();
+        vo.setId(1L);
+        vo.setOrderNo("O001");
+        vo.setCustomerId(1L);
+        vo.setCustomerName("customer");
+        vo.setOrderType("service");
+        vo.setOriginalAmount(BigDecimal.valueOf(100));
+        vo.setDiscountAmount(BigDecimal.ZERO);
+        vo.setReceivableAmount(BigDecimal.valueOf(100));
+        vo.setPaidAmount(BigDecimal.ZERO);
+        vo.setDebtAmount(BigDecimal.valueOf(100));
+        vo.setDebtStatus(1);
+        vo.setPayStatus(0);
+        vo.setOrderStatus(0);
+        return vo;
     }
 
     private ServiceOrderItem serviceOrderItem() {
