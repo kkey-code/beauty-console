@@ -47,6 +47,7 @@ import com.wkr.storeserver.handler.GlobalExceptionHandler;
 import com.wkr.storeserver.service.AppointmentItemService;
 import com.wkr.storeserver.service.AppointmentService;
 import com.wkr.storeserver.service.CustomerProfileService;
+import com.wkr.storeserver.service.DeletionGuardService;
 import com.wkr.storeserver.service.InventorySkuService;
 import com.wkr.storeserver.service.InventoryStockLogService;
 import com.wkr.storeserver.service.PaymentRecordService;
@@ -125,26 +126,28 @@ class ControllerApiUnitTest {
     private AppointmentItemService appointmentItemService;
     @Mock
     private AppointmentService appointmentService;
+    @Mock
+    private DeletionGuardService deletionGuardService;
 
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(
                         new SysUserController(sysUserService, passwordEncoder, permissionPointService),
                         new PermissionController(permissionPointService),
-                        new StaffMemberController(staffMemberService),
-                        new ServiceProjectController(serviceProjectService),
+                        new StaffMemberController(staffMemberService, deletionGuardService),
+                        new ServiceProjectController(serviceProjectService, deletionGuardService),
                         new ServiceProjectInventoryController(
                                 serviceProjectInventoryService,
                                 serviceProjectService,
                                 inventorySkuService),
                         new ServiceOrderItemController(serviceOrderItemService, staffMemberService),
                         new ServiceOrderController(serviceOrderService),
-                        new PaymentRecordController(paymentRecordService, serviceOrderService),
+                        new PaymentRecordController(paymentRecordService),
                         new InventoryStockLogController(inventoryStockLogService, inventorySkuService),
-                        new InventorySkuController(inventorySkuService),
-                        new CustomerProfileController(customerProfileService),
+                        new InventorySkuController(inventorySkuService, deletionGuardService),
+                        new CustomerProfileController(customerProfileService, deletionGuardService),
                         new AppointmentItemController(appointmentItemService, serviceProjectService),
-                        new AppointmentController(appointmentService, appointmentItemService))
+                        new AppointmentController(appointmentService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
 
@@ -377,6 +380,12 @@ class ControllerApiUnitTest {
 
         when(appointmentService.List(any(AppointmentPageQueryDTO.class))).thenReturn(Result.success(pageResult(new AppointmentVO())));
         when(appointmentService.getByID(anyLong())).thenReturn(new AppointmentVO());
+        when(appointmentService.createAppointment(any())).thenReturn(true);
+        when(appointmentService.updateAppointment(anyLong(), any())).thenReturn(true);
+        when(appointmentService.confirm(anyLong())).thenReturn(true);
+        when(appointmentService.complete(anyLong())).thenReturn(true);
+        when(appointmentService.cancel(anyLong())).thenReturn(true);
+        when(appointmentService.deleteAppointment(anyLong())).thenReturn(true);
 
         when(staffMemberService.page(any(Page.class), any(Wrapper.class))).thenReturn(pageOf(staffMember()));
         when(serviceProjectService.page(any(Page.class), any(Wrapper.class))).thenReturn(pageOf(serviceProject()));
@@ -398,6 +407,8 @@ class ControllerApiUnitTest {
         when(inventoryStockLogService.getById(anyLong())).thenAnswer(invocation -> stockLog("stock_in"));
         when(inventoryStockLogService.recordStockChange(any(), any())).thenAnswer(invocation -> stockLog("stock_in"));
         when(paymentRecordService.getById(anyLong())).thenReturn(paymentRecord(1), paymentRecord(0), paymentRecord(0));
+        when(paymentRecordService.createPaymentRecord(any())).thenReturn(1L);
+        when(paymentRecordService.voidPaymentRecord(anyLong())).thenReturn(true);
         when(serviceOrderService.getById(anyLong())).thenAnswer(invocation -> serviceOrder());
         when(serviceOrderService.getDetail(anyLong())).thenReturn(serviceOrderVO());
         when(appointmentService.getById(anyLong())).thenAnswer(invocation -> appointment());

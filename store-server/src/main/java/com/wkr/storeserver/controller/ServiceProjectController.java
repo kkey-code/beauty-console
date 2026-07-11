@@ -11,6 +11,8 @@ import com.wkr.storepojo.dto.ServiceProjectPageQueryDTO;
 import com.wkr.storepojo.entity.ServiceProject;
 import com.wkr.storepojo.enums.CommonStatusEnum;
 import com.wkr.storepojo.vo.ServiceProjectVO;
+import com.wkr.storeserver.audit.AuditLog;
+import com.wkr.storeserver.service.DeletionGuardService;
 import com.wkr.storeserver.service.ServiceProjectService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -43,9 +45,13 @@ import java.util.List;
 public class ServiceProjectController {
 
     private final ServiceProjectService serviceProjectService;
+    private final DeletionGuardService deletionGuardService;
 
-    public ServiceProjectController(ServiceProjectService serviceProjectService) {
+    public ServiceProjectController(
+            ServiceProjectService serviceProjectService,
+            DeletionGuardService deletionGuardService) {
         this.serviceProjectService = serviceProjectService;
+        this.deletionGuardService = deletionGuardService;
     }
 
     @GetMapping
@@ -82,6 +88,7 @@ public class ServiceProjectController {
 
     @PostMapping
     @ApiOperation("新增服务项目")
+    @AuditLog(action = "CREATE", target = "SERVICE_PROJECT")
     public Result<String> save(@Valid @RequestBody ServiceProjectDTO dto) {
         ServiceProject serviceProject = new ServiceProject();
         BeanUtils.copyProperties(dto, serviceProject);
@@ -97,6 +104,7 @@ public class ServiceProjectController {
 
     @PutMapping("/{id}")
     @ApiOperation("修改服务项目")
+    @AuditLog(action = "UPDATE", target = "SERVICE_PROJECT")
     public Result<String> update(@PathVariable("id") Long id, @Valid @RequestBody ServiceProjectDTO dto) {
         ServiceProject serviceProject = getExistingServiceProject(id);
         BeanUtils.copyProperties(dto, serviceProject);
@@ -112,8 +120,10 @@ public class ServiceProjectController {
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除服务项目")
+    @AuditLog(action = "DELETE", target = "SERVICE_PROJECT")
     public Result<String> delete(@PathVariable("id") Long id) {
         getExistingServiceProject(id);
+        deletionGuardService.assertServiceProjectCanDelete(id);
 
         boolean removed = serviceProjectService.removeById(id);
         if (!removed) {
@@ -124,6 +134,7 @@ public class ServiceProjectController {
 
     @PatchMapping("/{id}/status")
     @ApiOperation("修改服务项目状态")
+    @AuditLog(action = "STATUS", target = "SERVICE_PROJECT")
     public Result<String> updateStatus(@PathVariable("id") Long id, @RequestParam("status") Integer status) {
         ServiceProject serviceProject = getExistingServiceProject(id);
         serviceProject.setStatus(status);

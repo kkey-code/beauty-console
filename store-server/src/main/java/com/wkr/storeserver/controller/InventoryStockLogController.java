@@ -11,6 +11,7 @@ import com.wkr.storepojo.entity.InventorySku;
 import com.wkr.storepojo.entity.InventoryStockLog;
 import com.wkr.storepojo.enums.InventoryChangeTypeEnum;
 import com.wkr.storepojo.vo.InventoryStockLogVO;
+import com.wkr.storeserver.audit.AuditLog;
 import com.wkr.storeserver.service.InventorySkuService;
 import com.wkr.storeserver.service.InventoryStockLogService;
 import io.swagger.annotations.Api;
@@ -89,6 +90,7 @@ public class InventoryStockLogController {
     @PostMapping
     @ApiOperation("新增库存流水")
     @Transactional
+    @AuditLog(action = "CREATE", target = "INVENTORY_STOCK_LOG")
     public Result<Boolean> add(@Valid @RequestBody InventoryStockLogDTO dto) {
         inventoryStockLogService.recordStockChange(dto, dto.getChangeType());
         return Result.success(true);
@@ -97,6 +99,7 @@ public class InventoryStockLogController {
     @PostMapping("/inbound")
     @ApiOperation("入库")
     @Transactional
+    @AuditLog(action = "INBOUND", target = "INVENTORY_STOCK_LOG")
     public Result<Long> inbound(@Valid @RequestBody InventoryStockLogDTO dto) {
         InventoryStockLog inventoryStockLog = inventoryStockLogService.recordStockChange(
                 dto,
@@ -107,6 +110,7 @@ public class InventoryStockLogController {
     @PostMapping("/outbound")
     @ApiOperation("出库")
     @Transactional
+    @AuditLog(action = "OUTBOUND", target = "INVENTORY_STOCK_LOG")
     public Result<Long> outbound(@Valid @RequestBody InventoryStockLogDTO dto) {
         InventoryStockLog inventoryStockLog = inventoryStockLogService.recordStockChange(
                 dto,
@@ -117,6 +121,7 @@ public class InventoryStockLogController {
     @PostMapping("/adjust")
     @ApiOperation("盘点调整")
     @Transactional
+    @AuditLog(action = "ADJUST", target = "INVENTORY_STOCK_LOG")
     public Result<Long> adjust(@Valid @RequestBody InventoryStockLogDTO dto) {
         InventoryStockLog inventoryStockLog = inventoryStockLogService.recordStockChange(
                 dto,

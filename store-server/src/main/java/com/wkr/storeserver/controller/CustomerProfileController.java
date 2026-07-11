@@ -12,7 +12,9 @@ import com.wkr.storepojo.entity.CustomerProfile;
 import com.wkr.storepojo.enums.CustomerLevelEnum;
 import com.wkr.storepojo.enums.GenderEnum;
 import com.wkr.storepojo.vo.CustomerProfileVO;
+import com.wkr.storeserver.audit.AuditLog;
 import com.wkr.storeserver.service.CustomerProfileService;
+import com.wkr.storeserver.service.DeletionGuardService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import jakarta.validation.Valid;
@@ -42,9 +44,13 @@ import java.util.List;
 public class CustomerProfileController {
 
     private final CustomerProfileService customerProfileService;
+    private final DeletionGuardService deletionGuardService;
 
-    public CustomerProfileController(CustomerProfileService customerProfileService) {
+    public CustomerProfileController(
+            CustomerProfileService customerProfileService,
+            DeletionGuardService deletionGuardService) {
         this.customerProfileService = customerProfileService;
+        this.deletionGuardService = deletionGuardService;
     }
 
     @GetMapping
@@ -94,6 +100,7 @@ public class CustomerProfileController {
 
     @PostMapping
     @ApiOperation("添加客户")
+    @AuditLog(action = "CREATE", target = "CUSTOMER")
     public Result<?> add(@Valid @RequestBody CustomerProfileDTO dto) {
         CustomerProfile customerProfile = new CustomerProfile();
         BeanUtils.copyProperties(dto, customerProfile);
@@ -106,6 +113,7 @@ public class CustomerProfileController {
 
     @PutMapping("/{id}")
     @ApiOperation("修改客户")
+    @AuditLog(action = "UPDATE", target = "CUSTOMER")
     public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody CustomerProfileDTO dto) {
         CustomerProfile customerProfile = new CustomerProfile();
         BeanUtils.copyProperties(dto, customerProfile);
@@ -118,7 +126,9 @@ public class CustomerProfileController {
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除客户")
+    @AuditLog(action = "DELETE", target = "CUSTOMER")
     public Result<Boolean> delete(@PathVariable("id") Long id) {
+        deletionGuardService.assertCustomerCanDelete(id);
         boolean removed = customerProfileService.removeById(id);
         return removed ? Result.success(true) : Result.error("删除客户失败");
     }

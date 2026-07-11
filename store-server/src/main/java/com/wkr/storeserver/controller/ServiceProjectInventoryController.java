@@ -13,6 +13,7 @@ import com.wkr.storepojo.entity.ServiceProject;
 import com.wkr.storepojo.entity.ServiceProjectInventory;
 import com.wkr.storepojo.enums.CommonStatusEnum;
 import com.wkr.storepojo.vo.ServiceProjectInventoryVO;
+import com.wkr.storeserver.audit.AuditLog;
 import com.wkr.storeserver.service.InventorySkuService;
 import com.wkr.storeserver.service.ServiceProjectInventoryService;
 import com.wkr.storeserver.service.ServiceProjectService;
@@ -93,6 +94,7 @@ public class ServiceProjectInventoryController {
 
     @PostMapping
     @ApiOperation("新增服务项目耗材关系")
+    @AuditLog(action = "CREATE", target = "SERVICE_PROJECT_INVENTORY")
     public Result<Long> save(@Valid @RequestBody ServiceProjectInventoryDTO dto) {
         validateForeignKeys(dto);
         validateUnique(dto.getServiceProjectId(), dto.getInventoryId(), null);
@@ -111,6 +113,7 @@ public class ServiceProjectInventoryController {
 
     @PutMapping("/{id}")
     @ApiOperation("修改服务项目耗材关系")
+    @AuditLog(action = "UPDATE", target = "SERVICE_PROJECT_INVENTORY")
     public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody ServiceProjectInventoryDTO dto) {
         getExistingRelation(id);
         validateForeignKeys(dto);
@@ -126,6 +129,7 @@ public class ServiceProjectInventoryController {
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除服务项目耗材关系")
+    @AuditLog(action = "DELETE", target = "SERVICE_PROJECT_INVENTORY")
     public Result<Boolean> delete(@PathVariable("id") Long id) {
         getExistingRelation(id);
         return Result.success(serviceProjectInventoryService.removeById(id));

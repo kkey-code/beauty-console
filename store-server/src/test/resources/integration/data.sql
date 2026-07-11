@@ -20,6 +20,19 @@ INSERT INTO service_project (
     1001, 'Basic Facial', 'face', 168.00, 60, 'integration project', 1, NOW(), NOW()
 );
 
+INSERT INTO appointment (
+    id, appointment_no, customer_id, staff_id, appointment_time, status, total_duration_minutes, remark, create_time, update_time, deleted
+) VALUES
+    (4001, 'APT-IT-1', 1, 1, NOW(), 0, 60, 'transition test', NOW(), NOW(), 0),
+    (4002, 'APT-IT-2', 1, 1, NOW(), 1, 60, 'delete guard test', NOW(), NOW(), 0);
+
+INSERT INTO service_order (
+    id, order_no, appointment_id, customer_id, order_type, original_amount, discount_amount, receivable_amount,
+    paid_amount, debt_amount, debt_status, pay_status, order_status, remark, create_time, update_time, deleted
+) VALUES
+    (3001, 'ORD-IT-PAY-1', NULL, 1, 'service', 100.00, 0.00, 100.00, 0.00, 100.00, 1, 0, 0, 'payment test', NOW(), NOW(), 0),
+    (3002, 'ORD-IT-APPOINTMENT', 4002, 1, 'service', 100.00, 0.00, 100.00, 0.00, 100.00, 1, 0, 0, 'appointment guard test', NOW(), NOW(), 0);
+
 INSERT INTO sys_permission (
     id, permission_code, permission_name, permission_group, method, path_pattern, menu_path, action_key, status, create_time, update_time
 ) VALUES

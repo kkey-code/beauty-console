@@ -71,6 +71,9 @@ class ServiceOrderServiceImplFinishTest {
     @Mock
     private AppointmentItemService appointmentItemService;
 
+    @Mock
+    private DeletionGuardService deletionGuardService;
+
     private ServiceOrderServiceImpl service;
 
     @BeforeEach
@@ -84,7 +87,8 @@ class ServiceOrderServiceImplFinishTest {
                 inventoryStockLogService,
                 customerProfileService,
                 appointmentService,
-                appointmentItemService);
+                appointmentItemService,
+                deletionGuardService);
     }
 
     @Test

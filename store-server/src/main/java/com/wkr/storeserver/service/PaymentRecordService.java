@@ -1,6 +1,7 @@
 package com.wkr.storeserver.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.wkr.storepojo.dto.PaymentRecordDTO;
 import com.wkr.storepojo.entity.PaymentRecord;
 
 /**
@@ -10,4 +11,7 @@ import com.wkr.storepojo.entity.PaymentRecord;
 */
 public interface PaymentRecordService extends IService<PaymentRecord> {
 
+    Long createPaymentRecord(PaymentRecordDTO dto);
+
+    boolean voidPaymentRecord(Long id);
 }

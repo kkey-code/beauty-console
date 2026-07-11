@@ -14,6 +14,7 @@ import com.wkr.storepojo.entity.SysUser;
 import com.wkr.storepojo.vo.LoginUserVO;
 import com.wkr.storepojo.vo.SysUserVO;
 import com.wkr.storepojo.vo.UserPermissionVO;
+import com.wkr.storeserver.audit.AuditLog;
 import com.wkr.storeserver.service.PermissionPointService;
 import com.wkr.storeserver.service.SysUserService;
 import io.swagger.annotations.Api;
@@ -84,6 +85,7 @@ public class SysUserController {
 
     @PutMapping("/{id}/permissions")
     @ApiOperation("保存用户权限点")
+    @AuditLog(action = "PERMISSIONS", target = "USER")
     public Result<?> updatePermissions(
             @PathVariable("id") Long id,
             @Valid @RequestBody UserPermissionDTO userPermissionDTO) {
@@ -93,6 +95,7 @@ public class SysUserController {
 
     @PostMapping
     @ApiOperation("添加用户")
+    @AuditLog(action = "CREATE", target = "USER")
     public Result<Long> add(@Valid @RequestBody SysUserDTO sysUserDTO) {
         SysUser sysUser = new SysUser();
         BeanUtils.copyProperties(sysUserDTO, sysUser);
@@ -109,6 +112,7 @@ public class SysUserController {
 
     @PutMapping("/{id}")
     @ApiOperation("修改用户")
+    @AuditLog(action = "UPDATE", target = "USER")
     public Result<?> update(@PathVariable("id") Long id, @Valid @RequestBody SysUserDTO sysUserDTO) {
         SysUser sysUser = new SysUser();
         BeanUtils.copyProperties(sysUserDTO, sysUser);
@@ -125,6 +129,7 @@ public class SysUserController {
 
     @PatchMapping("/{id}/status")
     @ApiOperation("修改用户状态")
+    @AuditLog(action = "STATUS", target = "USER")
     public Result<?> updateStatus(
             @PathVariable("id") Long id,
             @Valid @RequestBody(required = false) SysUserStatusDTO sysUserStatusDTO,
@@ -138,6 +143,7 @@ public class SysUserController {
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除用户")
+    @AuditLog(action = "DELETE", target = "USER")
     public Result<?> deleteByid(@PathVariable("id") Long id) {
         if (id.equals(BaseContext.getCurrentUserId())) {
             throw new BusinessException("不能删除当前登录账号");

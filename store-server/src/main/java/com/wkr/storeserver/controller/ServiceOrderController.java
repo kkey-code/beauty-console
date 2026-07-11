@@ -5,6 +5,7 @@ import com.wkr.storecommon.common.Result;
 import com.wkr.storepojo.dto.ServiceOrderDTO;
 import com.wkr.storepojo.dto.ServiceOrderPageQueryDTO;
 import com.wkr.storepojo.vo.ServiceOrderVO;
+import com.wkr.storeserver.audit.AuditLog;
 import com.wkr.storeserver.service.ServiceOrderService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -49,36 +50,42 @@ public class ServiceOrderController {
 
     @PostMapping
     @ApiOperation("添加订单")
+    @AuditLog(action = "CREATE", target = "SERVICE_ORDER")
     public Result<Long> create(@Valid @RequestBody ServiceOrderDTO serviceOrderDTO) {
         return Result.success(serviceOrderService.createOrder(serviceOrderDTO));
     }
 
     @PostMapping("/from-appointment/{appointmentId}")
     @ApiOperation("从预约生成订单")
+    @AuditLog(action = "CREATE_FROM_APPOINTMENT", target = "SERVICE_ORDER")
     public Result<Long> createFromAppointment(@PathVariable("appointmentId") Long appointmentId) {
         return Result.success(serviceOrderService.createFromAppointment(appointmentId));
     }
 
     @PutMapping("/{id}")
     @ApiOperation("修改订单")
+    @AuditLog(action = "UPDATE", target = "SERVICE_ORDER")
     public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody ServiceOrderDTO serviceOrderDTO) {
         return Result.success(serviceOrderService.updateOrder(id, serviceOrderDTO));
     }
 
     @PatchMapping("/{id}/cancel")
     @ApiOperation("取消订单")
+    @AuditLog(action = "CANCEL", target = "SERVICE_ORDER")
     public Result<Boolean> cancel(@PathVariable("id") Long id) {
         return Result.success(serviceOrderService.cancel(id));
     }
 
     @PatchMapping("/{id}/finish")
     @ApiOperation("完成订单")
+    @AuditLog(action = "FINISH", target = "SERVICE_ORDER")
     public Result<Boolean> finish(@PathVariable("id") Long id) {
         return Result.success(serviceOrderService.finish(id));
     }
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除订单")
+    @AuditLog(action = "DELETE", target = "SERVICE_ORDER")
     public Result<Boolean> delete(@PathVariable("id") Long id) {
         return Result.success(serviceOrderService.deleteOrder(id));
     }

@@ -13,6 +13,8 @@ import com.wkr.storepojo.dto.InventorySkuPageQueryDTO;
 import com.wkr.storepojo.entity.InventorySku;
 import com.wkr.storepojo.enums.CommonStatusEnum;
 import com.wkr.storepojo.vo.InventorySkuVO;
+import com.wkr.storeserver.audit.AuditLog;
+import com.wkr.storeserver.service.DeletionGuardService;
 import com.wkr.storeserver.excel.InventorySkuExcelVO;
 import com.wkr.storeserver.service.InventorySkuService;
 import io.swagger.annotations.Api;
@@ -56,9 +58,13 @@ public class InventorySkuController {
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final InventorySkuService inventorySkuService;
+    private final DeletionGuardService deletionGuardService;
 
-    public InventorySkuController(InventorySkuService inventorySkuService) {
+    public InventorySkuController(
+            InventorySkuService inventorySkuService,
+            DeletionGuardService deletionGuardService) {
         this.inventorySkuService = inventorySkuService;
+        this.deletionGuardService = deletionGuardService;
     }
 
     @GetMapping
@@ -117,6 +123,7 @@ public class InventorySkuController {
 
     @PostMapping
     @ApiOperation("新增库存物品")
+    @AuditLog(action = "CREATE", target = "INVENTORY_SKU")
     public Result<Boolean> add(@Valid @RequestBody InventorySkuDTO dto) {
         InventorySku inventorySku = new InventorySku();
         BeanUtils.copyProperties(dto, inventorySku);
@@ -128,6 +135,7 @@ public class InventorySkuController {
 
     @PutMapping("/{id}")
     @ApiOperation("修改库存物品")
+    @AuditLog(action = "UPDATE", target = "INVENTORY_SKU")
     public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody InventorySkuDTO dto) {
         InventorySku inventorySku = getExistingInventorySku(id);
         BeanUtils.copyProperties(dto, inventorySku);
@@ -139,6 +147,7 @@ public class InventorySkuController {
 
     @PatchMapping("/{id}/status")
     @ApiOperation("修改状态")
+    @AuditLog(action = "STATUS", target = "INVENTORY_SKU")
     public Result<?> updateStatus(@PathVariable("id") Long id, @RequestParam("status") Integer status) {
         InventorySku inventorySku = getExistingInventorySku(id);
         inventorySku.setStatus(status);
@@ -150,8 +159,10 @@ public class InventorySkuController {
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除库存物品")
+    @AuditLog(action = "DELETE", target = "INVENTORY_SKU")
     public Result<?> delete(@PathVariable("id") Long id) {
         getExistingInventorySku(id);
+        deletionGuardService.assertInventorySkuCanDelete(id);
         boolean removed = inventorySkuService.removeById(id);
         return removed ? Result.success() : Result.error("删除失败");
     }

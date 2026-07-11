@@ -32,12 +32,14 @@ import com.wkr.storeserver.mapper.ServiceOrderMapper;
 import com.wkr.storeserver.service.AppointmentItemService;
 import com.wkr.storeserver.service.AppointmentService;
 import com.wkr.storeserver.service.CustomerProfileService;
+import com.wkr.storeserver.service.DeletionGuardService;
 import com.wkr.storeserver.service.InventoryStockLogService;
 import com.wkr.storeserver.service.PaymentRecordService;
 import com.wkr.storeserver.service.ServiceOrderItemService;
 import com.wkr.storeserver.service.ServiceOrderService;
 import com.wkr.storeserver.service.ServiceProjectInventoryService;
 import com.wkr.storeserver.service.StaffMemberService;
+import com.wkr.storeserver.support.BusinessNoGenerator;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,7 +47,6 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -64,8 +65,6 @@ import java.util.stream.Collectors;
 public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, ServiceOrder>
     implements ServiceOrderService{
 
-    private static final DateTimeFormatter ORDER_NO_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS");
-
     private final ServiceOrderMapper serviceOrderMapper;
     private final ServiceOrderItemService serviceOrderItemService;
     private final PaymentRecordService paymentRecordService;
@@ -75,6 +74,7 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
     private final CustomerProfileService customerProfileService;
     private final AppointmentService appointmentService;
     private final AppointmentItemService appointmentItemService;
+    private final DeletionGuardService deletionGuardService;
 
     public ServiceOrderServiceImpl(
             ServiceOrderMapper serviceOrderMapper,
@@ -85,7 +85,8 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
             InventoryStockLogService inventoryStockLogService,
             CustomerProfileService customerProfileService,
             AppointmentService appointmentService,
-            AppointmentItemService appointmentItemService) {
+            AppointmentItemService appointmentItemService,
+            DeletionGuardService deletionGuardService) {
         this.serviceOrderMapper = serviceOrderMapper;
         this.serviceOrderItemService = serviceOrderItemService;
         this.paymentRecordService = paymentRecordService;
@@ -95,6 +96,7 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
         this.customerProfileService = customerProfileService;
         this.appointmentService = appointmentService;
         this.appointmentItemService = appointmentItemService;
+        this.deletionGuardService = deletionGuardService;
     }
 
     @Override
@@ -286,6 +288,7 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
     public boolean deleteOrder(Long id) {
         ServiceOrder serviceOrder = getExistingOrder(id);
         OrderStatusEnum.validate(serviceOrder.getOrderStatus());
+        deletionGuardService.assertServiceOrderCanDelete(id);
         return removeById(id);
     }
 
@@ -688,7 +691,7 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
     }
 
     private String generateOrderNo() {
-        return "ORD" + LocalDateTime.now().format(ORDER_NO_FORMATTER);
+        return BusinessNoGenerator.next("ORD");
     }
 
     private Integer payStatusOf(BigDecimal paidAmount, BigDecimal receivableAmount) {

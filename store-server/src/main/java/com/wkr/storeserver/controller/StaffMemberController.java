@@ -12,6 +12,8 @@ import com.wkr.storepojo.entity.StaffMember;
 import com.wkr.storepojo.enums.CommonStatusEnum;
 import com.wkr.storepojo.enums.GenderEnum;
 import com.wkr.storepojo.vo.StaffMemberVO;
+import com.wkr.storeserver.audit.AuditLog;
+import com.wkr.storeserver.service.DeletionGuardService;
 import com.wkr.storeserver.service.StaffMemberService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -44,9 +46,13 @@ import java.util.List;
 public class StaffMemberController {
 
     private final StaffMemberService staffMemberService;
+    private final DeletionGuardService deletionGuardService;
 
-    public StaffMemberController(StaffMemberService staffMemberService) {
+    public StaffMemberController(
+            StaffMemberService staffMemberService,
+            DeletionGuardService deletionGuardService) {
         this.staffMemberService = staffMemberService;
+        this.deletionGuardService = deletionGuardService;
     }
 
     @GetMapping
@@ -86,6 +92,7 @@ public class StaffMemberController {
 
     @PostMapping
     @ApiOperation("添加员工")
+    @AuditLog(action = "CREATE", target = "STAFF")
     public Result<Boolean> add(@Valid @RequestBody StaffMemberDTO staffMemberDTO) {
         StaffMember staffMember = new StaffMember();
         BeanUtils.copyProperties(staffMemberDTO, staffMember);
@@ -101,6 +108,7 @@ public class StaffMemberController {
 
     @PutMapping("/{id}")
     @ApiOperation("修改员工信息")
+    @AuditLog(action = "UPDATE", target = "STAFF")
     public Result<Boolean> updateStaffMember(@PathVariable("id") Long id, @Valid @RequestBody StaffMemberDTO staffMemberDTO) {
         StaffMember staffMember = new StaffMember();
         BeanUtils.copyProperties(staffMemberDTO, staffMember);
@@ -116,6 +124,7 @@ public class StaffMemberController {
 
     @PatchMapping("/{id}/status")
     @ApiOperation("修改员工状态")
+    @AuditLog(action = "STATUS", target = "STAFF")
     public Result<Boolean> updateStatus(@PathVariable("id") Long id, @RequestParam("status") Integer status) {
         StaffMember staffMember = new StaffMember();
         staffMember.setId(id);
@@ -131,7 +140,9 @@ public class StaffMemberController {
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除员工")
+    @AuditLog(action = "DELETE", target = "STAFF")
     public Result<Boolean> delete(@PathVariable("id") Long id) {
+        deletionGuardService.assertStaffCanDelete(id);
         boolean removed = staffMemberService.removeById(id);
         if (!removed) {
             throw new SystemException("删除员工失败");

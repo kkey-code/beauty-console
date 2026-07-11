@@ -3,6 +3,7 @@ package com.wkr.storeserver.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.wkr.storecommon.common.PageResult;
 import com.wkr.storecommon.common.Result;
+import com.wkr.storepojo.dto.AppointmentDTO;
 import com.wkr.storepojo.dto.AppointmentPageQueryDTO;
 import com.wkr.storepojo.entity.Appointment;
 import com.wkr.storepojo.vo.AppointmentVO;
@@ -17,4 +18,16 @@ public interface AppointmentService extends IService<Appointment> {
     Result<PageResult<AppointmentVO>> List(AppointmentPageQueryDTO dto);
 
     AppointmentVO getByID(Long id);
+
+    boolean createAppointment(AppointmentDTO dto);
+
+    boolean updateAppointment(Long id, AppointmentDTO dto);
+
+    boolean confirm(Long id);
+
+    boolean complete(Long id);
+
+    boolean cancel(Long id);
+
+    boolean deleteAppointment(Long id);
 }
