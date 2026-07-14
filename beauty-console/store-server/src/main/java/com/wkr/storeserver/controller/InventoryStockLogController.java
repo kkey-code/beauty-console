@@ -14,8 +14,8 @@ import com.wkr.storepojo.vo.InventoryStockLogVO;
 import com.wkr.storeserver.audit.AuditLog;
 import com.wkr.storeserver.service.InventorySkuService;
 import com.wkr.storeserver.service.InventoryStockLogService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -37,7 +37,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/admin/inventory-stock-logs")
-@Api(tags = "库存流水相关接口")
+@Tag(name = "库存流水相关接口")
 public class InventoryStockLogController {
 
     private final InventoryStockLogService inventoryStockLogService;
@@ -51,7 +51,7 @@ public class InventoryStockLogController {
     }
 
     @GetMapping
-    @ApiOperation("库存流水列表")
+    @Operation(summary = "库存流水列表")
     public Result<PageResult<InventoryStockLogVO>> list(InventoryStockLogPageQueryDTO dto) {
         Page<InventoryStockLog> page = new Page<>(dto.getPage(), dto.getPageSize());
         String changeType = StringUtils.hasText(dto.getChangeType()) ? normalizeChangeType(dto.getChangeType()) : null;
@@ -78,7 +78,7 @@ public class InventoryStockLogController {
     }
 
     @GetMapping("/{id}")
-    @ApiOperation("查询库存流水")
+    @Operation(summary = "查询库存流水")
     public Result<InventoryStockLogVO> get(@PathVariable("id") Long id) {
         InventoryStockLog inventoryStockLog = inventoryStockLogService.getById(id);
         if (inventoryStockLog == null) {
@@ -88,7 +88,7 @@ public class InventoryStockLogController {
     }
 
     @PostMapping
-    @ApiOperation("新增库存流水")
+    @Operation(summary = "新增库存流水")
     @Transactional
     @AuditLog(action = "CREATE", target = "INVENTORY_STOCK_LOG")
     public Result<Boolean> add(@Valid @RequestBody InventoryStockLogDTO dto) {
@@ -97,7 +97,7 @@ public class InventoryStockLogController {
     }
 
     @PostMapping("/inbound")
-    @ApiOperation("入库")
+    @Operation(summary = "入库")
     @Transactional
     @AuditLog(action = "INBOUND", target = "INVENTORY_STOCK_LOG")
     public Result<Long> inbound(@Valid @RequestBody InventoryStockLogDTO dto) {
@@ -108,7 +108,7 @@ public class InventoryStockLogController {
     }
 
     @PostMapping("/outbound")
-    @ApiOperation("出库")
+    @Operation(summary = "出库")
     @Transactional
     @AuditLog(action = "OUTBOUND", target = "INVENTORY_STOCK_LOG")
     public Result<Long> outbound(@Valid @RequestBody InventoryStockLogDTO dto) {
@@ -119,7 +119,7 @@ public class InventoryStockLogController {
     }
 
     @PostMapping("/adjust")
-    @ApiOperation("盘点调整")
+    @Operation(summary = "盘点调整")
     @Transactional
     @AuditLog(action = "ADJUST", target = "INVENTORY_STOCK_LOG")
     public Result<Long> adjust(@Valid @RequestBody InventoryStockLogDTO dto) {

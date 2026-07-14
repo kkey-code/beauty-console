@@ -9,8 +9,8 @@ import com.wkr.storepojo.entity.ServiceProject;
 import com.wkr.storepojo.vo.AppointmentItemVO;
 import com.wkr.storeserver.service.AppointmentItemService;
 import com.wkr.storeserver.service.ServiceProjectService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -34,7 +34,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/admin/appointment-items")
-@Api(tags = "预约项目相关接口")
+@Tag(name = "预约项目相关接口")
 public class AppointmentItemController {
 
     private final AppointmentItemService appointmentItemService;
@@ -48,7 +48,7 @@ public class AppointmentItemController {
     }
 
     @GetMapping
-    @ApiOperation("预约项目列表")
+    @Operation(summary = "预约项目列表")
     public Result<List<AppointmentItemVO>> list(@RequestParam("appointmentId") Long appointmentId) {
         LambdaQueryWrapper<AppointmentItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(AppointmentItem::getAppointmentId, appointmentId);
@@ -63,7 +63,7 @@ public class AppointmentItemController {
     }
 
     @PostMapping
-    @ApiOperation("新增预约项目")
+    @Operation(summary = "新增预约项目")
     public Result<Long> save(@Valid @RequestBody AppointmentItemDTO appointmentItemDTO) {
         AppointmentItem appointmentItem = new AppointmentItem();
         BeanUtils.copyProperties(appointmentItemDTO, appointmentItem);
@@ -77,7 +77,7 @@ public class AppointmentItemController {
     }
 
     @PutMapping("/{id}")
-    @ApiOperation("修改预约项目明细")
+    @Operation(summary = "修改预约项目明细")
     public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody AppointmentItemDTO appointmentItemDTO) {
         AppointmentItem appointmentItem = new AppointmentItem();
         BeanUtils.copyProperties(appointmentItemDTO, appointmentItem);
@@ -88,7 +88,7 @@ public class AppointmentItemController {
     }
 
     @DeleteMapping("/{id}")
-    @ApiOperation("删除预约项目")
+    @Operation(summary = "删除预约项目")
     public Result<Boolean> delete(@PathVariable("id") Long id) {
         boolean removed = appointmentItemService.removeById(id);
         return Result.success(removed);

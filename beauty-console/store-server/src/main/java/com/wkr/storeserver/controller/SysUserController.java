@@ -17,8 +17,8 @@ import com.wkr.storepojo.vo.UserPermissionVO;
 import com.wkr.storeserver.audit.AuditLog;
 import com.wkr.storeserver.service.PermissionPointService;
 import com.wkr.storeserver.service.SysUserService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -43,7 +43,7 @@ import java.time.LocalDateTime;
 @Slf4j
 @RestController
 @RequestMapping("/admin/users")
-@Api(tags = "用户相关接口")
+@Tag(name = "用户相关接口")
 public class SysUserController {
 
     private final SysUserService sysUserService;
@@ -60,31 +60,31 @@ public class SysUserController {
     }
 
     @PostMapping("/login")
-    @ApiOperation("登录")
+    @Operation(summary = "登录")
     public Result<LoginUserVO> login(@Valid @RequestBody SysUserLoginDTO sysUserLoginDTO) {
         return Result.success(sysUserService.login(sysUserLoginDTO));
     }
 
     @GetMapping
-    @ApiOperation("用户分页查询用户列表")
+    @Operation(summary = "用户分页查询用户列表")
     public Result<PageResult<SysUserVO>> getList(@Valid SysUserPageQueryDTO sysUserPageQueryDTO) {
         return Result.success(sysUserService.page(sysUserPageQueryDTO));
     }
 
     @GetMapping("/{id}")
-    @ApiOperation("根据用户 id 查询用户")
+    @Operation(summary = "根据用户 id 查询用户")
     public Result<SysUserVO> getById(@PathVariable("id") Long id) {
         return Result.success(sysUserService.getByID(id));
     }
 
     @GetMapping("/{id}/permissions")
-    @ApiOperation("查询用户权限点")
+    @Operation(summary = "查询用户权限点")
     public Result<UserPermissionVO> getPermissions(@PathVariable("id") Long id) {
         return Result.success(permissionPointService.getUserPermissions(id));
     }
 
     @PutMapping("/{id}/permissions")
-    @ApiOperation("保存用户权限点")
+    @Operation(summary = "保存用户权限点")
     @AuditLog(action = "PERMISSIONS", target = "USER")
     public Result<?> updatePermissions(
             @PathVariable("id") Long id,
@@ -94,7 +94,7 @@ public class SysUserController {
     }
 
     @PostMapping
-    @ApiOperation("添加用户")
+    @Operation(summary = "添加用户")
     @AuditLog(action = "CREATE", target = "USER")
     public Result<Long> add(@Valid @RequestBody SysUserDTO sysUserDTO) {
         SysUser sysUser = new SysUser();
@@ -111,7 +111,7 @@ public class SysUserController {
     }
 
     @PutMapping("/{id}")
-    @ApiOperation("修改用户")
+    @Operation(summary = "修改用户")
     @AuditLog(action = "UPDATE", target = "USER")
     public Result<?> update(@PathVariable("id") Long id, @Valid @RequestBody SysUserDTO sysUserDTO) {
         SysUser sysUser = new SysUser();
@@ -128,7 +128,7 @@ public class SysUserController {
     }
 
     @PatchMapping("/{id}/status")
-    @ApiOperation("修改用户状态")
+    @Operation(summary = "修改用户状态")
     @AuditLog(action = "STATUS", target = "USER")
     public Result<?> updateStatus(
             @PathVariable("id") Long id,
@@ -142,7 +142,7 @@ public class SysUserController {
     }
 
     @DeleteMapping("/{id}")
-    @ApiOperation("删除用户")
+    @Operation(summary = "删除用户")
     @AuditLog(action = "DELETE", target = "USER")
     public Result<?> deleteByid(@PathVariable("id") Long id) {
         if (id.equals(BaseContext.getCurrentUserId())) {

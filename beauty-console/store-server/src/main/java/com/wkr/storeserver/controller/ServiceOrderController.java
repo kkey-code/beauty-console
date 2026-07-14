@@ -7,8 +7,8 @@ import com.wkr.storepojo.dto.ServiceOrderPageQueryDTO;
 import com.wkr.storepojo.vo.ServiceOrderVO;
 import com.wkr.storeserver.audit.AuditLog;
 import com.wkr.storeserver.service.ServiceOrderService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @RestController
 @RequestMapping("/admin/service-orders")
-@Api(tags = "订单相关接口")
+@Tag(name = "订单相关接口")
 public class ServiceOrderController {
 
     private final ServiceOrderService serviceOrderService;
@@ -37,54 +37,54 @@ public class ServiceOrderController {
     }
 
     @GetMapping
-    @ApiOperation("订单列表")
+    @Operation(summary = "订单列表")
     public Result<PageResult<ServiceOrderVO>> list(ServiceOrderPageQueryDTO dto) {
         return Result.success(serviceOrderService.pageOrders(dto));
     }
 
     @GetMapping("/{id}")
-    @ApiOperation("根据订单 id 查询订单")
+    @Operation(summary = "根据订单 id 查询订单")
     public Result<ServiceOrderVO> getById(@PathVariable("id") Long id) {
         return Result.success(serviceOrderService.getDetail(id));
     }
 
     @PostMapping
-    @ApiOperation("添加订单")
+    @Operation(summary = "添加订单")
     @AuditLog(action = "CREATE", target = "SERVICE_ORDER")
     public Result<Long> create(@Valid @RequestBody ServiceOrderDTO serviceOrderDTO) {
         return Result.success(serviceOrderService.createOrder(serviceOrderDTO));
     }
 
     @PostMapping("/from-appointment/{appointmentId}")
-    @ApiOperation("从预约生成订单")
+    @Operation(summary = "从预约生成订单")
     @AuditLog(action = "CREATE_FROM_APPOINTMENT", target = "SERVICE_ORDER")
     public Result<Long> createFromAppointment(@PathVariable("appointmentId") Long appointmentId) {
         return Result.success(serviceOrderService.createFromAppointment(appointmentId));
     }
 
     @PutMapping("/{id}")
-    @ApiOperation("修改订单")
+    @Operation(summary = "修改订单")
     @AuditLog(action = "UPDATE", target = "SERVICE_ORDER")
     public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody ServiceOrderDTO serviceOrderDTO) {
         return Result.success(serviceOrderService.updateOrder(id, serviceOrderDTO));
     }
 
     @PatchMapping("/{id}/cancel")
-    @ApiOperation("取消订单")
+    @Operation(summary = "取消订单")
     @AuditLog(action = "CANCEL", target = "SERVICE_ORDER")
     public Result<Boolean> cancel(@PathVariable("id") Long id) {
         return Result.success(serviceOrderService.cancel(id));
     }
 
     @PatchMapping("/{id}/finish")
-    @ApiOperation("完成订单")
+    @Operation(summary = "完成订单")
     @AuditLog(action = "FINISH", target = "SERVICE_ORDER")
     public Result<Boolean> finish(@PathVariable("id") Long id) {
         return Result.success(serviceOrderService.finish(id));
     }
 
     @DeleteMapping("/{id}")
-    @ApiOperation("删除订单")
+    @Operation(summary = "删除订单")
     @AuditLog(action = "DELETE", target = "SERVICE_ORDER")
     public Result<Boolean> delete(@PathVariable("id") Long id) {
         return Result.success(serviceOrderService.deleteOrder(id));

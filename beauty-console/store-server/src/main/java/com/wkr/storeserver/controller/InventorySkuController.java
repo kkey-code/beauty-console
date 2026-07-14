@@ -17,8 +17,8 @@ import com.wkr.storeserver.audit.AuditLog;
 import com.wkr.storeserver.service.DeletionGuardService;
 import com.wkr.storeserver.excel.InventorySkuExcelVO;
 import com.wkr.storeserver.service.InventorySkuService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -50,7 +50,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/admin/inventory-skus")
-@Api(tags = "库存物品相关接口")
+@Tag(name = "库存物品相关接口")
 public class InventorySkuController {
 
     private static final long EXPORT_MAX_ROWS = 10_000L;
@@ -68,7 +68,7 @@ public class InventorySkuController {
     }
 
     @GetMapping
-    @ApiOperation("分页查询库存物品")
+    @Operation(summary = "分页查询库存物品")
     public Result<PageResult<InventorySkuVO>> queryInventorySkus(InventorySkuPageQueryDTO dto) {
         Page<InventorySku> page = new Page<>(dto.getPage(), dto.getPageSize());
 
@@ -86,7 +86,7 @@ public class InventorySkuController {
     }
 
     @GetMapping("/export")
-    @ApiOperation("导出库存物品 Excel")
+    @Operation(summary = "导出库存物品 Excel")
     public void export(InventorySkuPageQueryDTO dto, HttpServletResponse response) throws IOException {
         LambdaQueryWrapper<InventorySku> wrapper = buildQueryWrapper(dto);
         long total = inventorySkuService.count(wrapper);
@@ -115,14 +115,14 @@ public class InventorySkuController {
     }
 
     @GetMapping("/{id}")
-    @ApiOperation("根据 id 查询库存物品")
+    @Operation(summary = "根据 id 查询库存物品")
     public Result<InventorySkuVO> getById(@PathVariable("id") Long id) {
         InventorySku inventorySku = getExistingInventorySku(id);
         return Result.success(toVO(inventorySku));
     }
 
     @PostMapping
-    @ApiOperation("新增库存物品")
+    @Operation(summary = "新增库存物品")
     @AuditLog(action = "CREATE", target = "INVENTORY_SKU")
     public Result<Boolean> add(@Valid @RequestBody InventorySkuDTO dto) {
         InventorySku inventorySku = new InventorySku();
@@ -134,7 +134,7 @@ public class InventorySkuController {
     }
 
     @PutMapping("/{id}")
-    @ApiOperation("修改库存物品")
+    @Operation(summary = "修改库存物品")
     @AuditLog(action = "UPDATE", target = "INVENTORY_SKU")
     public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody InventorySkuDTO dto) {
         InventorySku inventorySku = getExistingInventorySku(id);
@@ -146,7 +146,7 @@ public class InventorySkuController {
     }
 
     @PatchMapping("/{id}/status")
-    @ApiOperation("修改状态")
+    @Operation(summary = "修改状态")
     @AuditLog(action = "STATUS", target = "INVENTORY_SKU")
     public Result<?> updateStatus(@PathVariable("id") Long id, @RequestParam("status") Integer status) {
         InventorySku inventorySku = getExistingInventorySku(id);
@@ -158,7 +158,7 @@ public class InventorySkuController {
     }
 
     @DeleteMapping("/{id}")
-    @ApiOperation("删除库存物品")
+    @Operation(summary = "删除库存物品")
     @AuditLog(action = "DELETE", target = "INVENTORY_SKU")
     public Result<?> delete(@PathVariable("id") Long id) {
         getExistingInventorySku(id);

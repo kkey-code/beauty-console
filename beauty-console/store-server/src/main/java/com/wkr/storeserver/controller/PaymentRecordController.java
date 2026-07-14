@@ -11,8 +11,8 @@ import com.wkr.storepojo.entity.PaymentRecord;
 import com.wkr.storepojo.vo.PaymentRecordVO;
 import com.wkr.storeserver.audit.AuditLog;
 import com.wkr.storeserver.service.PaymentRecordService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -33,7 +33,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/admin/payment-records")
-@Api(tags = "收款流水相关接口")
+@Tag(name = "收款流水相关接口")
 public class PaymentRecordController {
 
     private final PaymentRecordService paymentRecordService;
@@ -43,7 +43,7 @@ public class PaymentRecordController {
     }
 
     @GetMapping
-    @ApiOperation("获取收款流水列表")
+    @Operation(summary = "获取收款流水列表")
     public Result<PageResult<PaymentRecordVO>> getList(PaymentRecordPageQueryDTO dto) {
         Page<PaymentRecord> page = new Page<>(dto.getPage(), dto.getPageSize());
 
@@ -69,7 +69,7 @@ public class PaymentRecordController {
     }
 
     @GetMapping("/{id}")
-    @ApiOperation("收款流水详情")
+    @Operation(summary = "收款流水详情")
     public Result<PaymentRecordVO> get(@PathVariable("id") Long id) {
         PaymentRecord record = paymentRecordService.getById(id);
         if (record == null) {
@@ -79,14 +79,14 @@ public class PaymentRecordController {
     }
 
     @PostMapping
-    @ApiOperation("新增收款记录")
+    @Operation(summary = "新增收款记录")
     @AuditLog(action = "CREATE", target = "PAYMENT_RECORD")
     public Result<Long> save(@Valid @RequestBody PaymentRecordDTO dto) {
         return Result.success(paymentRecordService.createPaymentRecord(dto));
     }
 
     @PatchMapping("/{id}/void")
-    @ApiOperation("作废收款记录")
+    @Operation(summary = "作废收款记录")
     @AuditLog(action = "VOID", target = "PAYMENT_RECORD")
     public Result<Boolean> voidPaymentRecord(@PathVariable("id") Long id) {
         return Result.success(paymentRecordService.voidPaymentRecord(id));

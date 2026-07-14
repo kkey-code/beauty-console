@@ -8,8 +8,8 @@ import com.wkr.storepojo.entity.StaffMember;
 import com.wkr.storepojo.vo.ServiceOrderItemVO;
 import com.wkr.storeserver.service.ServiceOrderItemService;
 import com.wkr.storeserver.service.StaffMemberService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -32,7 +32,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/admin/service-order-items")
-@Api(tags = "订单项目相关接口")
+@Tag(name = "订单项目相关接口")
 public class ServiceOrderItemController {
 
     private final ServiceOrderItemService serviceOrderItemService;
@@ -46,7 +46,7 @@ public class ServiceOrderItemController {
     }
 
     @GetMapping
-    @ApiOperation("订单项目列表")
+    @Operation(summary = "订单项目列表")
     public Result<List<ServiceOrderItemVO>> list(@RequestParam("orderId") Long orderId) {
         LambdaQueryWrapper<ServiceOrderItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ServiceOrderItem::getOrderId, orderId);
@@ -59,7 +59,7 @@ public class ServiceOrderItemController {
     }
 
     @PostMapping
-    @ApiOperation("创建服务订单项目")
+    @Operation(summary = "创建服务订单项目")
     public Result<Long> create(@Valid @RequestBody ServiceOrderItemDTO dto) {
         ServiceOrderItem serviceOrderItem = new ServiceOrderItem();
         BeanUtils.copyProperties(dto, serviceOrderItem);
@@ -70,7 +70,7 @@ public class ServiceOrderItemController {
     }
 
     @PutMapping("/{id}")
-    @ApiOperation("修改订单项目")
+    @Operation(summary = "修改订单项目")
     public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody ServiceOrderItemDTO dto) {
         ServiceOrderItem serviceOrderItem = new ServiceOrderItem();
         BeanUtils.copyProperties(dto, serviceOrderItem);
@@ -84,7 +84,7 @@ public class ServiceOrderItemController {
     }
 
     @DeleteMapping("/{id}")
-    @ApiOperation("删除订单项目")
+    @Operation(summary = "删除订单项目")
     public Result<Boolean> delete(@PathVariable("id") Long id) {
         boolean removed = serviceOrderItemService.removeById(id);
         if (!removed) {

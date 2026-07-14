@@ -14,8 +14,8 @@ import com.wkr.storepojo.vo.ServiceProjectVO;
 import com.wkr.storeserver.audit.AuditLog;
 import com.wkr.storeserver.service.DeletionGuardService;
 import com.wkr.storeserver.service.ServiceProjectService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -41,7 +41,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/admin/service-projects")
-@Api(tags = "服务项目相关接口")
+@Tag(name = "服务项目相关接口")
 public class ServiceProjectController {
 
     private final ServiceProjectService serviceProjectService;
@@ -55,7 +55,7 @@ public class ServiceProjectController {
     }
 
     @GetMapping
-    @ApiOperation("分页查询服务项目")
+    @Operation(summary = "分页查询服务项目")
     public Result<PageResult<ServiceProjectVO>> list(ServiceProjectPageQueryDTO dto) {
         Page<ServiceProject> page = new Page<>(dto.getPage(), dto.getPageSize());
 
@@ -80,14 +80,14 @@ public class ServiceProjectController {
     }
 
     @GetMapping("/{id}")
-    @ApiOperation("获取服务项目详情")
+    @Operation(summary = "获取服务项目详情")
     public Result<ServiceProjectVO> get(@PathVariable("id") Long id) {
         ServiceProject serviceProject = getExistingServiceProject(id);
         return Result.success(toVO(serviceProject));
     }
 
     @PostMapping
-    @ApiOperation("新增服务项目")
+    @Operation(summary = "新增服务项目")
     @AuditLog(action = "CREATE", target = "SERVICE_PROJECT")
     public Result<String> save(@Valid @RequestBody ServiceProjectDTO dto) {
         ServiceProject serviceProject = new ServiceProject();
@@ -103,7 +103,7 @@ public class ServiceProjectController {
     }
 
     @PutMapping("/{id}")
-    @ApiOperation("修改服务项目")
+    @Operation(summary = "修改服务项目")
     @AuditLog(action = "UPDATE", target = "SERVICE_PROJECT")
     public Result<String> update(@PathVariable("id") Long id, @Valid @RequestBody ServiceProjectDTO dto) {
         ServiceProject serviceProject = getExistingServiceProject(id);
@@ -119,7 +119,7 @@ public class ServiceProjectController {
     }
 
     @DeleteMapping("/{id}")
-    @ApiOperation("删除服务项目")
+    @Operation(summary = "删除服务项目")
     @AuditLog(action = "DELETE", target = "SERVICE_PROJECT")
     public Result<String> delete(@PathVariable("id") Long id) {
         getExistingServiceProject(id);
@@ -133,7 +133,7 @@ public class ServiceProjectController {
     }
 
     @PatchMapping("/{id}/status")
-    @ApiOperation("修改服务项目状态")
+    @Operation(summary = "修改服务项目状态")
     @AuditLog(action = "STATUS", target = "SERVICE_PROJECT")
     public Result<String> updateStatus(@PathVariable("id") Long id, @RequestParam("status") Integer status) {
         ServiceProject serviceProject = getExistingServiceProject(id);

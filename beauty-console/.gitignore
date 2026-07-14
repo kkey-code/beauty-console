@@ -2,6 +2,7 @@
 /store-common/target/
 /store-pojo/target/
 /store-server/target/
+/.m2-repository/
 
 # IDE/local workspace files
 .idea/

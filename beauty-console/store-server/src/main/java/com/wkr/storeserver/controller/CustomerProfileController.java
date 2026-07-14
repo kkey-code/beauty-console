@@ -15,8 +15,8 @@ import com.wkr.storepojo.vo.CustomerProfileVO;
 import com.wkr.storeserver.audit.AuditLog;
 import com.wkr.storeserver.service.CustomerProfileService;
 import com.wkr.storeserver.service.DeletionGuardService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -40,7 +40,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/admin/customers")
-@Api(tags = "客户相关接口")
+@Tag(name = "客户相关接口")
 public class CustomerProfileController {
 
     private final CustomerProfileService customerProfileService;
@@ -54,7 +54,7 @@ public class CustomerProfileController {
     }
 
     @GetMapping
-    @ApiOperation("分页查询客户列表")
+    @Operation(summary = "分页查询客户列表")
     public Result<PageResult<CustomerProfileVO>> list(CustomerProfilePageQueryDTO dto) {
         Page<CustomerProfile> page = new Page<>(dto.getPage(), dto.getPageSize());
 
@@ -84,7 +84,7 @@ public class CustomerProfileController {
     }
 
     @GetMapping("/{id}")
-    @ApiOperation("查询客户详情")
+    @Operation(summary = "查询客户详情")
     public Result<CustomerProfileVO> get(@PathVariable("id") Long id) {
         CustomerProfile customerProfile = customerProfileService.getById(id);
         if (customerProfile == null) {
@@ -99,7 +99,7 @@ public class CustomerProfileController {
     }
 
     @PostMapping
-    @ApiOperation("添加客户")
+    @Operation(summary = "添加客户")
     @AuditLog(action = "CREATE", target = "CUSTOMER")
     public Result<?> add(@Valid @RequestBody CustomerProfileDTO dto) {
         CustomerProfile customerProfile = new CustomerProfile();
@@ -112,7 +112,7 @@ public class CustomerProfileController {
     }
 
     @PutMapping("/{id}")
-    @ApiOperation("修改客户")
+    @Operation(summary = "修改客户")
     @AuditLog(action = "UPDATE", target = "CUSTOMER")
     public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody CustomerProfileDTO dto) {
         CustomerProfile customerProfile = new CustomerProfile();
@@ -125,7 +125,7 @@ public class CustomerProfileController {
     }
 
     @DeleteMapping("/{id}")
-    @ApiOperation("删除客户")
+    @Operation(summary = "删除客户")
     @AuditLog(action = "DELETE", target = "CUSTOMER")
     public Result<Boolean> delete(@PathVariable("id") Long id) {
         deletionGuardService.assertCustomerCanDelete(id);

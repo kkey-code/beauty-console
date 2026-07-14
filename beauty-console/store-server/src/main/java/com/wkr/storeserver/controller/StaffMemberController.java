@@ -15,8 +15,8 @@ import com.wkr.storepojo.vo.StaffMemberVO;
 import com.wkr.storeserver.audit.AuditLog;
 import com.wkr.storeserver.service.DeletionGuardService;
 import com.wkr.storeserver.service.StaffMemberService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -42,7 +42,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/admin/staff-members")
-@Api(tags = "员工相关接口")
+@Tag(name = "员工相关接口")
 public class StaffMemberController {
 
     private final StaffMemberService staffMemberService;
@@ -56,7 +56,7 @@ public class StaffMemberController {
     }
 
     @GetMapping
-    @ApiOperation("分页查询员工列表")
+    @Operation(summary = "分页查询员工列表")
     public Result<PageResult<StaffMemberVO>> list(StaffMemberPageQueryDTO dto) {
         Page<StaffMember> pageQuery = new Page<>(dto.getPage(), dto.getPageSize());
 
@@ -81,7 +81,7 @@ public class StaffMemberController {
     }
 
     @GetMapping("/{id}")
-    @ApiOperation("根据员工 id 查询员工")
+    @Operation(summary = "根据员工 id 查询员工")
     public Result<StaffMemberVO> getById(@PathVariable("id") Long id) {
         StaffMember staffMember = staffMemberService.getById(id);
         if (staffMember == null) {
@@ -91,7 +91,7 @@ public class StaffMemberController {
     }
 
     @PostMapping
-    @ApiOperation("添加员工")
+    @Operation(summary = "添加员工")
     @AuditLog(action = "CREATE", target = "STAFF")
     public Result<Boolean> add(@Valid @RequestBody StaffMemberDTO staffMemberDTO) {
         StaffMember staffMember = new StaffMember();
@@ -107,7 +107,7 @@ public class StaffMemberController {
     }
 
     @PutMapping("/{id}")
-    @ApiOperation("修改员工信息")
+    @Operation(summary = "修改员工信息")
     @AuditLog(action = "UPDATE", target = "STAFF")
     public Result<Boolean> updateStaffMember(@PathVariable("id") Long id, @Valid @RequestBody StaffMemberDTO staffMemberDTO) {
         StaffMember staffMember = new StaffMember();
@@ -123,7 +123,7 @@ public class StaffMemberController {
     }
 
     @PatchMapping("/{id}/status")
-    @ApiOperation("修改员工状态")
+    @Operation(summary = "修改员工状态")
     @AuditLog(action = "STATUS", target = "STAFF")
     public Result<Boolean> updateStatus(@PathVariable("id") Long id, @RequestParam("status") Integer status) {
         StaffMember staffMember = new StaffMember();
@@ -139,7 +139,7 @@ public class StaffMemberController {
     }
 
     @DeleteMapping("/{id}")
-    @ApiOperation("删除员工")
+    @Operation(summary = "删除员工")
     @AuditLog(action = "DELETE", target = "STAFF")
     public Result<Boolean> delete(@PathVariable("id") Long id) {
         deletionGuardService.assertStaffCanDelete(id);

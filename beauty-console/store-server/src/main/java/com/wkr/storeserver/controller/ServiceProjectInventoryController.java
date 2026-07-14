@@ -17,8 +17,8 @@ import com.wkr.storeserver.audit.AuditLog;
 import com.wkr.storeserver.service.InventorySkuService;
 import com.wkr.storeserver.service.ServiceProjectInventoryService;
 import com.wkr.storeserver.service.ServiceProjectService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -41,7 +41,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/admin/service-project-inventories")
-@Api(tags = "服务项目耗材关系接口")
+@Tag(name = "服务项目耗材关系接口")
 public class ServiceProjectInventoryController {
 
     private final ServiceProjectInventoryService serviceProjectInventoryService;
@@ -58,7 +58,7 @@ public class ServiceProjectInventoryController {
     }
 
     @GetMapping
-    @ApiOperation("分页查询服务项目耗材关系")
+    @Operation(summary = "分页查询服务项目耗材关系")
     public Result<PageResult<ServiceProjectInventoryVO>> list(ServiceProjectInventoryPageQueryDTO dto) {
         Page<ServiceProjectInventory> page = new Page<>(dto.getPage(), dto.getPageSize());
         LambdaQueryWrapper<ServiceProjectInventory> wrapper = new LambdaQueryWrapper<>();
@@ -87,13 +87,13 @@ public class ServiceProjectInventoryController {
     }
 
     @GetMapping("/{id}")
-    @ApiOperation("获取服务项目耗材关系详情")
+    @Operation(summary = "获取服务项目耗材关系详情")
     public Result<ServiceProjectInventoryVO> get(@PathVariable("id") Long id) {
         return Result.success(toVO(getExistingRelation(id)));
     }
 
     @PostMapping
-    @ApiOperation("新增服务项目耗材关系")
+    @Operation(summary = "新增服务项目耗材关系")
     @AuditLog(action = "CREATE", target = "SERVICE_PROJECT_INVENTORY")
     public Result<Long> save(@Valid @RequestBody ServiceProjectInventoryDTO dto) {
         validateForeignKeys(dto);
@@ -112,7 +112,7 @@ public class ServiceProjectInventoryController {
     }
 
     @PutMapping("/{id}")
-    @ApiOperation("修改服务项目耗材关系")
+    @Operation(summary = "修改服务项目耗材关系")
     @AuditLog(action = "UPDATE", target = "SERVICE_PROJECT_INVENTORY")
     public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody ServiceProjectInventoryDTO dto) {
         getExistingRelation(id);
@@ -128,7 +128,7 @@ public class ServiceProjectInventoryController {
     }
 
     @DeleteMapping("/{id}")
-    @ApiOperation("删除服务项目耗材关系")
+    @Operation(summary = "删除服务项目耗材关系")
     @AuditLog(action = "DELETE", target = "SERVICE_PROJECT_INVENTORY")
     public Result<Boolean> delete(@PathVariable("id") Long id) {
         getExistingRelation(id);

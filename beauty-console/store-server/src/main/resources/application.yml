@@ -47,3 +47,16 @@ sky:
     admin-secret-key: ${STORE_JWT_ADMIN_SECRET_KEY:itcast}
     admin-ttl: ${STORE_JWT_ADMIN_TTL:7200000}
     admin-token-name: ${STORE_JWT_ADMIN_TOKEN_NAME:token}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  group-configs:
+    - group: admin
+      display-name: 门店后台管理接口
+      paths-to-match: /admin/**
+      packages-to-scan: com.wkr.storeserver.controller
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
