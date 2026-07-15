@@ -6,6 +6,7 @@ import com.wkr.storepojo.dto.ServiceOrderDTO;
 import com.wkr.storepojo.dto.ServiceOrderPageQueryDTO;
 import com.wkr.storepojo.vo.ServiceOrderVO;
 import com.wkr.storeserver.audit.AuditLog;
+import com.wkr.storeserver.ratelimit.RateLimiter;
 import com.wkr.storeserver.service.ServiceOrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,6 +21,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * 服务订单接口控制器，只负责接收管理端请求并委托服务层处理订单业务。
@@ -51,6 +54,7 @@ public class ServiceOrderController {
     @PostMapping
     @Operation(summary = "添加订单")
     @AuditLog(action = "CREATE", target = "SERVICE_ORDER")
+    @RateLimiter(key = "service-order:create", maxRequests = 10, window = 1, timeUnit = TimeUnit.MINUTES)
     public Result<Long> create(@Valid @RequestBody ServiceOrderDTO serviceOrderDTO) {
         return Result.success(serviceOrderService.createOrder(serviceOrderDTO));
     }
@@ -58,6 +62,7 @@ public class ServiceOrderController {
     @PostMapping("/from-appointment/{appointmentId}")
     @Operation(summary = "从预约生成订单")
     @AuditLog(action = "CREATE_FROM_APPOINTMENT", target = "SERVICE_ORDER")
+    @RateLimiter(key = "service-order:create", maxRequests = 10, window = 1, timeUnit = TimeUnit.MINUTES)
     public Result<Long> createFromAppointment(@PathVariable("appointmentId") Long appointmentId) {
         return Result.success(serviceOrderService.createFromAppointment(appointmentId));
     }

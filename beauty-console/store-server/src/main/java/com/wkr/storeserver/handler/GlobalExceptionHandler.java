@@ -3,12 +3,15 @@ package com.wkr.storeserver.handler;
 import com.wkr.storecommon.common.Result;
 import com.wkr.storecommon.exception.BusinessException;
 import com.wkr.storecommon.exception.IllegalStatusTransitionException;
+import com.wkr.storecommon.exception.RateLimitExceededException;
 import com.wkr.storecommon.exception.ServiceException;
 import com.wkr.storecommon.exception.SystemException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
@@ -28,6 +31,17 @@ import java.util.stream.StreamSupport;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<Result<?>> handleRateLimitExceededException(
+            RateLimitExceededException e,
+            HttpServletRequest request) {
+        String message = defaultMessage(e.getMessage(), "请求太频繁，请稍后再试");
+        log.warn("Rate limit exceeded: method={}, uri={}, msg={}",
+                request.getMethod(), request.getRequestURI(), message);
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(Result.error(message));
+    }
 
     @ExceptionHandler({
             BusinessException.class,
