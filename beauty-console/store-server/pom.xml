@@ -108,6 +108,13 @@
             <version>${springdoc-openapi.version}</version>
         </dependency>
 
+        <!-- Controllers use OpenAPI 3 annotations directly; keep them on the compile classpath explicitly. -->
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations-jakarta</artifactId>
+            <version>${swagger-v3-annotations.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>

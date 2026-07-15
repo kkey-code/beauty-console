@@ -23,6 +23,7 @@
         <lombok.version>1.18.46</lombok.version>
         <easyexcel.version>3.3.2</easyexcel.version>
         <swagger-annotations.version>1.6.16</swagger-annotations.version>
+        <swagger-v3-annotations.version>2.2.47</swagger-v3-annotations.version>
         <knife4j.version>4.5.0</knife4j.version>
         <springdoc-openapi.version>2.8.17</springdoc-openapi.version>
         <redisson.version>4.6.1</redisson.version>
