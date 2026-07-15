@@ -97,7 +97,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column v-if="hasActions" label="操作" fixed="right" width="230">
+        <el-table-column v-if="hasActions" label="操作" fixed="right" :width="config.actionWidth || 230">
           <template slot-scope="{ row }">
             <el-button
               v-if="canEdit"
@@ -219,6 +219,98 @@
         </el-button>
         <el-button type="primary" :loading="submitting" @click="submitForm">
           保存
+        </el-button>
+      </div>
+    </el-dialog>
+
+    <el-dialog
+      :title="appointmentItemDialogTitle"
+      :visible.sync="appointmentItemDialogVisible"
+      width="820px"
+      custom-class="rounded-dialog appointment-item-dialog"
+    >
+      <div v-loading="appointmentItemLoading" class="appointment-item-body">
+        <div class="appointment-item-target">
+          <div>
+            <strong>{{ appointmentItemTarget.appointmentNo || `预约 #${appointmentItemTarget.id || '-'}` }}</strong>
+            <span>{{ appointmentItemTarget.customerName || '-' }}</span>
+          </div>
+          <p>至少添加一个服务项目后，预约才能转为订单。</p>
+        </div>
+
+        <el-form label-width="90px" class="appointment-item-form">
+          <el-row :gutter="14">
+            <el-col :span="10">
+              <el-form-item label="服务项目" required>
+                <el-select
+                  v-model="appointmentItemForm.serviceProjectId"
+                  filterable
+                  placeholder="按名称选择项目"
+                  @change="handleAppointmentProjectChange"
+                >
+                  <el-option
+                    v-for="project in serviceProjectOptions"
+                    :key="project.id"
+                    :label="`${project.name}（¥${money(project.price)}）`"
+                    :value="project.id"
+                  />
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="5">
+              <el-form-item label="成交价" required>
+                <el-input v-model="appointmentItemForm.price" type="number" min="0" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="5">
+              <el-form-item label="时长(分)">
+                <el-input v-model="appointmentItemForm.durationMinutes" type="number" min="0" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="4">
+              <el-form-item label-width="0">
+                <el-button
+                  type="primary"
+                  :loading="appointmentItemSubmitting"
+                  @click="submitAppointmentItem"
+                >
+                  {{ appointmentItemEditingId ? '保存' : '添加' }}
+                </el-button>
+              </el-form-item>
+            </el-col>
+          </el-row>
+        </el-form>
+
+        <el-table :data="appointmentItems" border empty-text="还没有项目明细，请在上方添加">
+          <el-table-column prop="serviceName" label="服务项目" min-width="180" />
+          <el-table-column label="成交价" width="110">
+            <template slot-scope="{ row }">
+              ¥{{ money(row.price) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="durationMinutes" label="时长(分钟)" width="110" />
+          <el-table-column label="操作" width="130">
+            <template slot-scope="{ row }">
+              <el-button type="text" size="mini" @click="editAppointmentItem(row)">
+                编辑
+              </el-button>
+              <el-button type="text" size="mini" class="danger-link" @click="removeAppointmentItem(row)">
+                删除
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="appointmentItemDialogVisible = false">
+          关闭
+        </el-button>
+        <el-button
+          type="primary"
+          :disabled="appointmentItems.length === 0"
+          @click="convertAppointmentToOrder"
+        >
+          转为订单
         </el-button>
       </div>
     </el-dialog>
@@ -560,7 +652,9 @@ const resourceConfigs: any = {
     creatable: true,
     editable: true,
     deletable: true,
+    actionWidth: 285,
     rowActions: [
+      { label: '项目明细', action: 'items', permissionAction: 'edit' },
       { label: '确认', action: 'confirm', message: '确认该预约？' },
       { label: '取消', action: 'cancel', message: '取消该预约？' },
       { label: '转订单', action: 'toOrder', message: '根据该预约生成服务订单？' }
@@ -745,6 +839,14 @@ export default class extends Vue {
   private permissionRoleDefaultCodes: string[] = []
   private permissionRestoreDefault = false
   private permissionGroups: any[] = []
+  private appointmentItemDialogVisible = false
+  private appointmentItemLoading = false
+  private appointmentItemSubmitting = false
+  private appointmentItemTarget: any = {}
+  private appointmentItems: any[] = []
+  private appointmentItemForm: any = {}
+  private appointmentItemEditingId: number | string = ''
+  private serviceProjectOptions: any[] = []
   private listRequestSource: any = null
   private listRequestSequence = 0
 
@@ -780,7 +882,7 @@ export default class extends Vue {
 
   get permittedRowActions() {
     const rowActions = this.config.rowActions || []
-    return rowActions.filter((action: any) => this.canUseAction(action.action))
+    return rowActions.filter((action: any) => this.canUseAction(action.permissionAction || action.action))
   }
 
   get hasActions() {
@@ -793,6 +895,10 @@ export default class extends Vue {
 
   get permissionDialogTitle() {
     return `权限分配 - ${this.permissionTarget.username || ''}`
+  }
+
+  get appointmentItemDialogTitle() {
+    return `预约项目明细 - ${this.appointmentItemTarget.customerName || ''}`
   }
 
   mounted() {
@@ -990,12 +1096,146 @@ export default class extends Vue {
       this.openPermissionDialog(row)
       return
     }
+    if (action.action === 'items') {
+      await this.openAppointmentItemDialog(row)
+      return
+    }
+    if (action.action === 'toOrder') {
+      const itemResponse = await listRecords('appointment-items', { appointmentId: row.id })
+      const items = itemResponse.data.data || []
+      if (items.length === 0) {
+        this.$message.warning('请先添加预约项目明细')
+        await this.openAppointmentItemDialog(row)
+        return
+      }
+    }
     await this.$confirm(action.message || '确认执行该操作？', '提示', { type: 'warning' })
     const response = action.action === 'toOrder'
       ? await createOrderFromAppointment(row.id)
       : await patchAction(this.config.endpoint, row.id, action.action)
     if (Number(response.data.code) === 200) {
       this.$message.success('操作成功')
+      this.loadData()
+    }
+  }
+
+  private emptyAppointmentItemForm() {
+    return {
+      serviceProjectId: '',
+      price: '',
+      durationMinutes: ''
+    }
+  }
+
+  private async openAppointmentItemDialog(row: any) {
+    this.appointmentItemTarget = row
+    this.appointmentItemForm = this.emptyAppointmentItemForm()
+    this.appointmentItemEditingId = ''
+    this.appointmentItems = []
+    this.serviceProjectOptions = []
+    this.appointmentItemDialogVisible = true
+    this.appointmentItemLoading = true
+    try {
+      const [itemResponse, projectResponse] = await Promise.all([
+        listRecords('appointment-items', { appointmentId: row.id }),
+        listRecords('service-projects', { page: 1, pageSize: 100, status: 1 })
+      ])
+      this.appointmentItems = itemResponse.data.data || []
+      const projectPayload = projectResponse.data.data || {}
+      this.serviceProjectOptions = projectPayload.records || []
+    } finally {
+      this.appointmentItemLoading = false
+    }
+  }
+
+  private handleAppointmentProjectChange(projectId: number | string) {
+    const project = this.serviceProjectOptions.find((item: any) => String(item.id) === String(projectId))
+    if (!project) {
+      return
+    }
+    this.appointmentItemForm.price = project.price
+    this.appointmentItemForm.durationMinutes = project.durationMinutes
+  }
+
+  private async submitAppointmentItem() {
+    const projectId = this.appointmentItemForm.serviceProjectId
+    const project = this.serviceProjectOptions.find((item: any) => String(item.id) === String(projectId))
+    if (!project) {
+      this.$message.warning('请选择服务项目')
+      return
+    }
+    if (this.appointmentItemForm.price === '' || Number(this.appointmentItemForm.price) < 0) {
+      this.$message.warning('请输入正确的成交价')
+      return
+    }
+
+    const payload: any = {
+      appointmentId: this.appointmentItemTarget.id,
+      serviceProjectId: project.id,
+      serviceName: project.name,
+      price: Number(this.appointmentItemForm.price),
+      durationMinutes: Number(this.appointmentItemForm.durationMinutes || 0),
+      sortNo: this.appointmentItemEditingId
+        ? Number((this.appointmentItems.find((item: any) => String(item.id) === String(this.appointmentItemEditingId)) || {}).sortNo || 1)
+        : this.appointmentItems.length + 1
+    }
+    if (this.appointmentItemTarget.staffId) {
+      payload.staffId = this.appointmentItemTarget.staffId
+    }
+
+    this.appointmentItemSubmitting = true
+    try {
+      const response = this.appointmentItemEditingId
+        ? await updateRecord('appointment-items', this.appointmentItemEditingId, payload)
+        : await createRecord('appointment-items', payload)
+      if (Number(response.data.code) === 200) {
+        this.$message.success(this.appointmentItemEditingId ? '项目明细已更新' : '项目明细已添加')
+        this.appointmentItemEditingId = ''
+        this.appointmentItemForm = this.emptyAppointmentItemForm()
+        await this.loadAppointmentItems()
+      }
+    } finally {
+      this.appointmentItemSubmitting = false
+    }
+  }
+
+  private editAppointmentItem(row: any) {
+    this.appointmentItemEditingId = row.id
+    this.appointmentItemForm = {
+      serviceProjectId: row.serviceProjectId,
+      price: row.price,
+      durationMinutes: row.durationMinutes
+    }
+  }
+
+  private async removeAppointmentItem(row: any) {
+    await this.$confirm(`确认删除项目“${row.serviceName || row.serviceProjectId}”？`, '提示', { type: 'warning' })
+    const response = await deleteRecord('appointment-items', row.id)
+    if (Number(response.data.code) === 200) {
+      this.$message.success('项目明细已删除')
+      if (String(this.appointmentItemEditingId) === String(row.id)) {
+        this.appointmentItemEditingId = ''
+        this.appointmentItemForm = this.emptyAppointmentItemForm()
+      }
+      await this.loadAppointmentItems()
+    }
+  }
+
+  private async loadAppointmentItems() {
+    const response = await listRecords('appointment-items', { appointmentId: this.appointmentItemTarget.id })
+    this.appointmentItems = response.data.data || []
+  }
+
+  private async convertAppointmentToOrder() {
+    if (this.appointmentItems.length === 0) {
+      this.$message.warning('请至少添加一个服务项目')
+      return
+    }
+    await this.$confirm('确认根据当前预约项目生成服务订单？', '提示', { type: 'warning' })
+    const response = await createOrderFromAppointment(this.appointmentItemTarget.id)
+    if (Number(response.data.code) === 200) {
+      this.$message.success('订单生成成功')
+      this.appointmentItemDialogVisible = false
       this.loadData()
     }
   }
@@ -1210,6 +1450,49 @@ export default class extends Vue {
 
 .permission-body {
   min-height: 260px;
+}
+
+.appointment-item-body {
+  min-height: 260px;
+}
+
+.appointment-item-target {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  margin-bottom: 18px;
+  border: 1px solid #edf0f5;
+  border-radius: 16px;
+  background: #fbfcfe;
+
+  div {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  strong {
+    color: #20242f;
+  }
+
+  span,
+  p {
+    color: #7b8496;
+    font-size: 13px;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.appointment-item-form {
+  .el-select,
+  .el-input {
+    width: 100%;
+  }
 }
 
 .permission-target {
