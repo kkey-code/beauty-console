@@ -48,7 +48,7 @@ const router = new Router({
           path: 'customers',
           component: Resource,
           name: 'Customers',
-          meta: { title: '客户档案', icon: 'icon-vip', resource: 'customers', roles: ['SUPER_ADMIN', 'STORE_MANAGER', 'STAFF', 'FINANCE', 'READONLY'], permission: 'customers:view' }
+          meta: { title: '客户档案', icon: 'icon-user', resource: 'customers', roles: ['SUPER_ADMIN', 'STORE_MANAGER', 'STAFF', 'FINANCE', 'READONLY'], permission: 'customers:view' }
         },
         {
           path: 'service-projects',
