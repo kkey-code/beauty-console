@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS sys_user_permission (
 INSERT INTO sys_permission (
     id, permission_code, permission_name, permission_group, method, path_pattern, menu_path, action_key, status
 ) VALUES
-    (1001, 'dashboard:view', '工作台', '工作台', NULL, NULL, '/dashboard', 'dashboard:view', 1),
+    (1001, 'dashboard:view', '工作台', '工作台', 'GET', '/admin/dashboard/**', '/dashboard', 'dashboard:view', 1),
     (1002, 'customers:view', '客户查看', '客户档案', 'GET', '/admin/customers/**', '/customers', 'customers:view', 1),
     (1003, 'customers:create', '客户新增', '客户档案', 'POST', '/admin/customers', NULL, 'customers:create', 1),
     (1004, 'customers:edit', '客户编辑', '客户档案', 'PUT', '/admin/customers/**', NULL, 'customers:edit', 1),

@@ -111,6 +111,28 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
     }
 
     @Override
+    public List<ServiceOrderVO> listPendingOrderSummaries(int limit) {
+        int normalizedLimit = Math.max(1, Math.min(limit, 50));
+        List<ServiceOrder> orders = list(new LambdaQueryWrapper<ServiceOrder>()
+                .eq(ServiceOrder::getOrderStatus, OrderStatusEnum.PENDING.getCode())
+                .orderByDesc(ServiceOrder::getUpdateTime)
+                .orderByDesc(ServiceOrder::getId)
+                .last("LIMIT " + normalizedLimit));
+        if (orders == null || orders.isEmpty()) {
+            return List.of();
+        }
+
+        Set<Long> customerIds = orders.stream()
+                .map(ServiceOrder::getCustomerId)
+                .filter(id -> id != null)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Map<Long, CustomerProfile> customerById = loadCustomers(customerIds);
+        return orders.stream()
+                .map(order -> toBasicVO(order, customerById.get(order.getCustomerId())))
+                .toList();
+    }
+
+    @Override
     public ServiceOrderVO getDetail(Long id) {
         return toVO(getExistingOrder(id), true);
     }

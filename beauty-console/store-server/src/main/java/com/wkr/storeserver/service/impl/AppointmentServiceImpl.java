@@ -71,6 +71,17 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
     }
 
     @Override
+    public List<AppointmentVO> listRecent(int limit) {
+        int normalizedLimit = Math.max(1, Math.min(limit, 50));
+        Page<AppointmentVO> page = new Page<>(1, normalizedLimit, false);
+        IPage<AppointmentVO> records = appointmentMapper.list(page, new AppointmentPageQueryDTO());
+        for (AppointmentVO appointmentVO : records.getRecords()) {
+            appointmentVO.setStatusName(AppointmentStatusEnum.labelOf(appointmentVO.getStatus()));
+        }
+        return records.getRecords();
+    }
+
+    @Override
     public AppointmentVO getByID(Long id) {
         Appointment appointment = appointmentMapper.selectById(id);
         if (appointment == null) {

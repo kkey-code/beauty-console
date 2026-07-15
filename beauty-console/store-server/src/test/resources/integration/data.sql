@@ -36,7 +36,7 @@ INSERT INTO service_order (
 INSERT INTO sys_permission (
     id, permission_code, permission_name, permission_group, method, path_pattern, menu_path, action_key, status, create_time, update_time
 ) VALUES
-    (1001, 'dashboard:view', '工作台', '工作台', NULL, NULL, '/dashboard', 'dashboard:view', 1, NOW(), NOW()),
+    (1001, 'dashboard:view', '工作台', '工作台', 'GET', '/admin/dashboard/**', '/dashboard', 'dashboard:view', 1, NOW(), NOW()),
     (1016, 'inventorySkus:view', '库存耗材查看', '库存中心', 'GET', '/admin/inventory-skus/**', '/inventory-skus', 'inventorySkus:view', 1, NOW(), NOW()),
     (1026, 'inventoryStockLogs:create', '库存流水新增', '库存中心', 'POST', '/admin/inventory-stock-logs/**', NULL, 'inventoryStockLogs:create', 1, NOW(), NOW()),
     (1021, 'serviceProjectInventories:view', '项目耗材查看', '库存中心', 'GET', '/admin/service-project-inventories/**', '/service-project-inventories', 'serviceProjectInventories:view', 1, NOW(), NOW()),

@@ -20,6 +20,8 @@ public interface ServiceOrderService extends IService<ServiceOrder> {
 
     PageResult<ServiceOrderVO> pageOrders(ServiceOrderPageQueryDTO dto);
 
+    List<ServiceOrderVO> listPendingOrderSummaries(int limit);
+
     ServiceOrderVO getDetail(Long id);
 
     Long createOrder(ServiceOrderDTO dto);

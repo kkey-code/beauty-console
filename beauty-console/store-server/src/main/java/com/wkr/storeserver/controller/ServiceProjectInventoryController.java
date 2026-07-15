@@ -33,7 +33,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 服务项目耗材关系接口控制器，负责维护项目完成时自动扣减的库存 SKU 配置。
@@ -75,10 +80,7 @@ public class ServiceProjectInventoryController {
 
         IPage<ServiceProjectInventory> pageResult = serviceProjectInventoryService.page(page, wrapper);
 
-        List<ServiceProjectInventoryVO> list = new ArrayList<>();
-        for (ServiceProjectInventory item : pageResult.getRecords()) {
-            list.add(toVO(item));
-        }
+        List<ServiceProjectInventoryVO> list = toVOs(pageResult.getRecords());
 
         PageResult<ServiceProjectInventoryVO> result = new PageResult<>();
         result.setRecords(list);
@@ -163,16 +165,76 @@ public class ServiceProjectInventoryController {
     }
 
     private ServiceProjectInventoryVO toVO(ServiceProjectInventory relation) {
+        ServiceProject serviceProject = serviceProjectService.getById(relation.getServiceProjectId());
+        InventorySku inventorySku = inventorySkuService.getById(relation.getInventoryId());
+        return toVO(relation, serviceProject, inventorySku);
+    }
+
+    private List<ServiceProjectInventoryVO> toVOs(List<ServiceProjectInventory> relations) {
+        if (relations == null || relations.isEmpty()) {
+            return List.of();
+        }
+
+        Set<Long> serviceProjectIds = relations.stream()
+                .map(ServiceProjectInventory::getServiceProjectId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+        Set<Long> inventoryIds = relations.stream()
+                .map(ServiceProjectInventory::getInventoryId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+
+        Map<Long, ServiceProject> serviceProjectById = mapServiceProjects(
+                serviceProjectIds.isEmpty() ? List.of() : serviceProjectService.listByIds(serviceProjectIds));
+        Map<Long, InventorySku> inventoryById = mapInventorySkus(
+                inventoryIds.isEmpty() ? List.of() : inventorySkuService.listByIds(inventoryIds));
+
+        List<ServiceProjectInventoryVO> result = new ArrayList<>(relations.size());
+        for (ServiceProjectInventory relation : relations) {
+            result.add(toVO(
+                    relation,
+                    serviceProjectById.get(relation.getServiceProjectId()),
+                    inventoryById.get(relation.getInventoryId())));
+        }
+        return result;
+    }
+
+    private Map<Long, ServiceProject> mapServiceProjects(Collection<ServiceProject> serviceProjects) {
+        Map<Long, ServiceProject> result = new LinkedHashMap<>();
+        if (serviceProjects != null) {
+            for (ServiceProject serviceProject : serviceProjects) {
+                if (serviceProject != null && serviceProject.getId() != null) {
+                    result.put(serviceProject.getId(), serviceProject);
+                }
+            }
+        }
+        return result;
+    }
+
+    private Map<Long, InventorySku> mapInventorySkus(Collection<InventorySku> inventorySkus) {
+        Map<Long, InventorySku> result = new LinkedHashMap<>();
+        if (inventorySkus != null) {
+            for (InventorySku inventorySku : inventorySkus) {
+                if (inventorySku != null && inventorySku.getId() != null) {
+                    result.put(inventorySku.getId(), inventorySku);
+                }
+            }
+        }
+        return result;
+    }
+
+    private ServiceProjectInventoryVO toVO(
+            ServiceProjectInventory relation,
+            ServiceProject serviceProject,
+            InventorySku inventorySku) {
         ServiceProjectInventoryVO vo = new ServiceProjectInventoryVO();
         BeanUtils.copyProperties(relation, vo);
         vo.setStatusName(CommonStatusEnum.labelOf(relation.getStatus()));
 
-        ServiceProject serviceProject = serviceProjectService.getById(relation.getServiceProjectId());
         if (serviceProject != null) {
             vo.setServiceProjectName(serviceProject.getName());
         }
 
-        InventorySku inventorySku = inventorySkuService.getById(relation.getInventoryId());
         if (inventorySku != null) {
             vo.setInventoryName(inventorySku.getName());
             vo.setInventoryUnit(inventorySku.getUnit());

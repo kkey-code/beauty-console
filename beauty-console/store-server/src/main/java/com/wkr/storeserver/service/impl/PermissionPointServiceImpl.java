@@ -18,6 +18,9 @@ import com.wkr.storeserver.mapper.SysUserPermissionMapper;
 import com.wkr.storeserver.security.PermissionRule;
 import com.wkr.storeserver.service.PermissionPointService;
 import org.springframework.beans.BeanUtils;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -53,6 +56,7 @@ public class PermissionPointServiceImpl extends ServiceImpl<SysPermissionMapper,
     }
 
     @Override
+    @Cacheable(cacheNames = "permission:model", key = "'ready'", unless = "#result == false")
     public boolean isPermissionModelReady() {
         try {
             return sysPermissionMapper.selectCount(activePermissionWrapper()) > 0;
@@ -62,6 +66,10 @@ public class PermissionPointServiceImpl extends ServiceImpl<SysPermissionMapper,
     }
 
     @Override
+    @Cacheable(
+            cacheNames = "permission:codes",
+            key = "#p0 + ':' + (#p1 == null ? 'NONE' : #p1.name())",
+            sync = true)
     public List<String> listEffectiveCodes(Long userId, RoleEnum role) {
         try {
             return listEffectivePermissions(userId, role).stream()
@@ -75,6 +83,10 @@ public class PermissionPointServiceImpl extends ServiceImpl<SysPermissionMapper,
     }
 
     @Override
+    @Cacheable(
+            cacheNames = "permission:rules",
+            key = "#p0 + ':' + (#p1 == null ? 'NONE' : #p1.name())",
+            sync = true)
     public List<PermissionRule> listEffectiveRules(Long userId, RoleEnum role) {
         return listEffectivePermissions(userId, role).stream()
                 .filter(item -> StringUtils.hasText(item.getMethod()) && StringUtils.hasText(item.getPathPattern()))
@@ -105,6 +117,11 @@ public class PermissionPointServiceImpl extends ServiceImpl<SysPermissionMapper,
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "permission:codes", allEntries = true),
+            @CacheEvict(cacheNames = "permission:rules", allEntries = true),
+            @CacheEvict(cacheNames = "dashboard:overview", allEntries = true)
+    })
     public void updateUserPermissions(Long userId, UserPermissionDTO dto) {
         requireUser(userId);
         if (dto == null || dto.getPermissionCodes() == null) {

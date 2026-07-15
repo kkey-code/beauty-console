@@ -5,7 +5,13 @@
         <p>门店经营概览</p>
         <h1>今天先看预约、订单和库存风险</h1>
       </div>
-      <el-button type="primary" icon="el-icon-refresh" @click="loadData">
+      <el-button
+        type="primary"
+        icon="el-icon-refresh"
+        :loading="loading"
+        :disabled="loading"
+        @click="loadData(true)"
+      >
         刷新数据
       </el-button>
     </div>
@@ -89,7 +95,7 @@
 
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
-import { listRecords } from '@/api/beauty'
+import { getDashboardOverview } from '@/api/beauty'
 import { UserModule } from '@/store/modules/user'
 import { canUseResourceAction } from '@/utils/rolePermissions'
 
@@ -120,41 +126,30 @@ export default class extends Vue {
   }
 
   mounted() {
-    this.loadData()
+    this.loadData(false)
   }
 
-  private async loadData() {
+  private async loadData(refresh = false) {
+    if (this.loading) {
+      return
+    }
     this.loading = true
     try {
-      const [customers, appointments, orders, inventory, pendingOrders, appointmentRows, inventoryRows] = await Promise.all([
-        this.fetchIfAllowed('customers', 'customers', { page: 1, pageSize: 1 }),
-        this.fetchIfAllowed('appointments', 'appointments', { page: 1, pageSize: 1 }),
-        this.fetchIfAllowed('serviceOrders', 'service-orders', { page: 1, pageSize: 1 }),
-        this.fetchIfAllowed('inventorySkus', 'inventory-skus', { page: 1, pageSize: 1 }),
-        this.fetchIfAllowed('serviceOrders', 'service-orders', { page: 1, pageSize: 5, orderStatus: 0 }),
-        this.fetchIfAllowed('appointments', 'appointments', { page: 1, pageSize: 5 }),
-        this.fetchIfAllowed('inventorySkus', 'inventory-skus', { page: 1, pageSize: 5, lowStockOnly: true })
-      ])
+      const response = await getDashboardOverview(refresh)
+      const payload = (((response || {}).data || {}).data || {}) as any
 
       this.metrics = [
-        { ...this.metrics[0], value: this.totalOf(customers) },
-        { ...this.metrics[1], value: this.totalOf(appointments) },
-        { ...this.metrics[2], value: this.totalOf(orders) },
-        { ...this.metrics[3], value: this.totalOf(inventory) }
+        { ...this.metrics[0], value: Number(payload.customerTotal || 0) },
+        { ...this.metrics[1], value: Number(payload.appointmentTotal || 0) },
+        { ...this.metrics[2], value: Number(payload.orderTotal || 0) },
+        { ...this.metrics[3], value: Number(payload.inventoryTotal || 0) }
       ]
-      this.pendingOrders = this.recordsOf(pendingOrders)
-      this.appointments = this.recordsOf(appointmentRows)
-      this.lowStockItems = this.recordsOf(inventoryRows)
+      this.pendingOrders = payload.pendingOrders || []
+      this.appointments = payload.appointments || []
+      this.lowStockItems = payload.lowStockItems || []
     } finally {
       this.loading = false
     }
-  }
-
-  private fetchIfAllowed(resourceKey: string, endpoint: string, params: any) {
-    if (!this.canView(resourceKey)) {
-      return Promise.resolve(null)
-    }
-    return listRecords(endpoint, params)
   }
 
   private canView(resourceKey: string) {
@@ -163,14 +158,6 @@ export default class extends Vue {
 
   private canViewOrAction(resourceKey: string, action: string) {
     return canUseResourceAction(resourceKey, action, UserModule.roles, UserModule.permissions)
-  }
-
-  private totalOf(response: any) {
-    return Number((((response || {}).data || {}).data || {}).total || 0)
-  }
-
-  private recordsOf(response: any) {
-    return ((((response || {}).data || {}).data || {}).records || []) as any[]
   }
 
   private money(value: any) {

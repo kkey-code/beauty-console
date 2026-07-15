@@ -5,7 +5,7 @@ import { UserModule } from '@/store/modules/user'
 
 const service = axios.create({
   baseURL: process.env.VUE_APP_BASE_API,
-  timeout: 600000
+  timeout: 30000
 })
 
 service.interceptors.request.use(
@@ -32,6 +32,9 @@ service.interceptors.response.use(
     return response
   },
   (error: any) => {
+    if (axios.isCancel(error)) {
+      return Promise.reject(error)
+    }
     const response = error && error.response
     const body = (response && response.data) || {}
     if (response && response.status === 401) {

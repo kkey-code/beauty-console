@@ -1,10 +1,18 @@
 import request from '@/utils/request'
 
-export const listRecords = (resource: string, params: any) =>
+export const listRecords = (resource: string, params: any, cancelToken?: any) =>
   request({
     url: `/admin/${resource}`,
     method: 'get',
-    params
+    params,
+    cancelToken
+  })
+
+export const getDashboardOverview = (refresh = false) =>
+  request({
+    url: '/admin/dashboard/overview',
+    method: 'get',
+    params: { refresh }
   })
 
 export const getRecord = (resource: string, id: number | string) =>

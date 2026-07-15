@@ -6,7 +6,7 @@
         <h1>{{ config.title }}</h1>
       </div>
       <div class="heading-actions">
-        <el-button icon="el-icon-refresh" @click="loadData">
+        <el-button icon="el-icon-refresh" :loading="loading" :disabled="loading" @click="loadData">
           刷新
         </el-button>
         <el-button
@@ -51,7 +51,7 @@
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" icon="el-icon-search" @click="handleSearch">
+          <el-button type="primary" icon="el-icon-search" :loading="loading" @click="handleSearch">
             查询
           </el-button>
           <el-button icon="el-icon-refresh-left" @click="resetSearch">
@@ -145,6 +145,7 @@
           :page-size="pageSize"
           :page-sizes="[10, 20, 50]"
           :total="total"
+          :disabled="loading"
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
         />
@@ -276,6 +277,7 @@
 </template>
 
 <script lang="ts">
+import axios from 'axios'
 import { Component, Vue, Watch } from 'vue-property-decorator'
 import {
   createOrderFromAppointment,
@@ -743,6 +745,8 @@ export default class extends Vue {
   private permissionRoleDefaultCodes: string[] = []
   private permissionRestoreDefault = false
   private permissionGroups: any[] = []
+  private listRequestSource: any = null
+  private listRequestSequence = 0
 
   get resourceKey() {
     const meta = this.$route.meta || {}
@@ -796,8 +800,14 @@ export default class extends Vue {
     this.loadData()
   }
 
+  beforeDestroy() {
+    this.listRequestSequence += 1
+    this.cancelListRequest('页面已离开')
+  }
+
   @Watch('$route')
   private onRouteChange() {
+    this.cancelListRequest('已切换页面')
     this.resetState()
     this.loadData()
   }
@@ -817,6 +827,10 @@ export default class extends Vue {
   }
 
   private async loadData() {
+    this.cancelListRequest('已发起更新的查询')
+    const requestSequence = ++this.listRequestSequence
+    const requestSource = axios.CancelToken.source()
+    this.listRequestSource = requestSource
     this.loading = true
     try {
       const params = this.cleanParams({
@@ -824,14 +838,31 @@ export default class extends Vue {
         page: this.page,
         pageSize: this.pageSize
       })
-      const { data } = await listRecords(this.config.endpoint, params)
+      const { data } = await listRecords(this.config.endpoint, params, requestSource.token)
+      if (requestSequence !== this.listRequestSequence) {
+        return
+      }
       if (Number(data.code) === 200) {
         const payload = data.data || {}
         this.records = payload.records || []
         this.total = Number(payload.total || 0)
       }
+    } catch (error) {
+      if (!axios.isCancel(error)) {
+        throw error
+      }
     } finally {
-      this.loading = false
+      if (requestSequence === this.listRequestSequence) {
+        this.loading = false
+        this.listRequestSource = null
+      }
+    }
+  }
+
+  private cancelListRequest(reason: string) {
+    if (this.listRequestSource) {
+      this.listRequestSource.cancel(reason)
+      this.listRequestSource = null
     }
   }
 

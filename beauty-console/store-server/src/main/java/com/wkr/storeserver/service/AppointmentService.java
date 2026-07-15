@@ -8,6 +8,8 @@ import com.wkr.storepojo.dto.AppointmentPageQueryDTO;
 import com.wkr.storepojo.entity.Appointment;
 import com.wkr.storepojo.vo.AppointmentVO;
 
+import java.util.List;
+
 /**
 * @author kkey
 * @description 针对表【appointment(预约主表)】的数据库操作Service
@@ -16,6 +18,8 @@ import com.wkr.storepojo.vo.AppointmentVO;
 public interface AppointmentService extends IService<Appointment> {
 
     Result<PageResult<AppointmentVO>> List(AppointmentPageQueryDTO dto);
+
+    List<AppointmentVO> listRecent(int limit);
 
     AppointmentVO getByID(Long id);
 
