@@ -30,5 +30,8 @@ router.beforeEach(async (to: Route, _: Route, next: any) => {
 
 router.afterEach((to: Route) => {
   NProgress.done()
-  document.title = to.meta.title
+  const pageTitle = to.meta && to.meta.title
+  document.title = pageTitle && pageTitle !== '美容门店后台'
+    ? `${pageTitle} - 美容门店后台`
+    : '美容门店后台'
 })

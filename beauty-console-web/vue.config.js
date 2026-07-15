@@ -1,5 +1,5 @@
 const path = require('path')
-const name = 'Vue Typescript Admin'
+const name = '美容门店后台'
 const IS_PROD = ['production', 'development'].includes(process.env.NODE_ENV)
 
 module.exports = {
