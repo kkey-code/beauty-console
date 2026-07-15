@@ -41,7 +41,7 @@ public class ServiceOrderController {
 
     @GetMapping
     @Operation(summary = "订单列表")
-    public Result<PageResult<ServiceOrderVO>> list(ServiceOrderPageQueryDTO dto) {
+    public Result<PageResult<ServiceOrderVO>> list(@Valid ServiceOrderPageQueryDTO dto) {
         return Result.success(serviceOrderService.pageOrders(dto));
     }
 

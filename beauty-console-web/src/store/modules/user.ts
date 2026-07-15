@@ -82,7 +82,7 @@ class User extends VuexModule implements IUserState {
     Cookies.set('username', username)
 
     const { data } = await login({ username, password: userInfo.password })
-    if (String(data.code) === '1') {
+    if (Number(data.code) === 200) {
       const loginUser = data.data || {}
       this.SET_TOKEN(loginUser.token)
       this.SET_USERINFO(loginUser)
@@ -95,7 +95,7 @@ class User extends VuexModule implements IUserState {
       return data
     }
 
-    Message.error(data.msg || '登录失败')
+    Message.error(data.message || '登录失败')
     return data
   }
 

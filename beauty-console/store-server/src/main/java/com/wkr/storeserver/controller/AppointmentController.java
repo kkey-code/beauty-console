@@ -38,7 +38,7 @@ public class AppointmentController {
 
     @GetMapping
     @Operation(summary = "预约列表")
-    public Result<PageResult<AppointmentVO>> list(AppointmentPageQueryDTO dto) {
+    public Result<PageResult<AppointmentVO>> list(@Valid AppointmentPageQueryDTO dto) {
         return appointmentService.List(dto);
     }
 

@@ -55,14 +55,14 @@ class AdminApiRealIntegrationTest {
                         .param("page", "1")
                         .param("pageSize", "1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(1));
+                .andExpect(jsonPath("$.code").value(200));
 
         mockMvc.perform(get("/admin/service-project-inventories")
                         .header("token", token)
                         .param("page", "1")
                         .param("pageSize", "5"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(1));
+                .andExpect(jsonPath("$.code").value(200));
     }
 
     private String loginAndGetToken() throws Exception {
@@ -72,7 +72,7 @@ class AdminApiRealIntegrationTest {
                                 {"username":"admin","password":"123456"}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.code").value(200))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();

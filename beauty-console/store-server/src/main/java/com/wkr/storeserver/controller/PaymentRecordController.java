@@ -44,7 +44,7 @@ public class PaymentRecordController {
 
     @GetMapping
     @Operation(summary = "获取收款流水列表")
-    public Result<PageResult<PaymentRecordVO>> getList(PaymentRecordPageQueryDTO dto) {
+    public Result<PageResult<PaymentRecordVO>> getList(@Valid PaymentRecordPageQueryDTO dto) {
         Page<PaymentRecord> page = new Page<>(dto.getPage(), dto.getPageSize());
 
         LambdaQueryWrapper<PaymentRecord> wrapper = new LambdaQueryWrapper<>();

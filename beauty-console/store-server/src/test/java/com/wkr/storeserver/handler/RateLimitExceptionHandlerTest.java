@@ -23,7 +23,7 @@ class RateLimitExceptionHandlerTest {
 
         assertEquals(HttpStatus.TOO_MANY_REQUESTS, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(0, response.getBody().getCode());
-        assertEquals("请求太频繁，请稍后再试", response.getBody().getMsg());
+        assertEquals(429, response.getBody().getCode());
+        assertEquals("请求太频繁，请稍后再试", response.getBody().getMessage());
     }
 }

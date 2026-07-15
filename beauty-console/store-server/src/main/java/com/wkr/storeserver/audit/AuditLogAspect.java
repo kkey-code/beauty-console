@@ -2,6 +2,7 @@ package com.wkr.storeserver.audit;
 
 import com.wkr.storecommon.common.BaseContext;
 import com.wkr.storecommon.common.Result;
+import com.wkr.storecommon.common.ResultCode;
 import com.wkr.storepojo.entity.OperationAuditLog;
 import com.wkr.storeserver.mapper.OperationAuditLogMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +30,8 @@ public class AuditLogAspect {
 
     @AfterReturning(pointcut = "@annotation(auditLog)", returning = "returnValue")
     public void record(JoinPoint joinPoint, AuditLog auditLog, Object returnValue) {
-        if (returnValue instanceof Result<?> result && !Integer.valueOf(1).equals(result.getCode())) {
+        if (returnValue instanceof Result<?> result
+                && !Integer.valueOf(ResultCode.SUCCESS.getCode()).equals(result.getCode())) {
             return;
         }
 

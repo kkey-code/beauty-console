@@ -17,6 +17,8 @@ import com.wkr.storeserver.service.ServiceProjectService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.StringUtils;
@@ -56,7 +58,7 @@ public class ServiceProjectController {
 
     @GetMapping
     @Operation(summary = "分页查询服务项目")
-    public Result<PageResult<ServiceProjectVO>> list(ServiceProjectPageQueryDTO dto) {
+    public Result<PageResult<ServiceProjectVO>> list(@Valid ServiceProjectPageQueryDTO dto) {
         Page<ServiceProject> page = new Page<>(dto.getPage(), dto.getPageSize());
 
         LambdaQueryWrapper<ServiceProject> wrapper = new LambdaQueryWrapper<>();
@@ -135,7 +137,11 @@ public class ServiceProjectController {
     @PatchMapping("/{id}/status")
     @Operation(summary = "修改服务项目状态")
     @AuditLog(action = "STATUS", target = "SERVICE_PROJECT")
-    public Result<String> updateStatus(@PathVariable("id") Long id, @RequestParam("status") Integer status) {
+    public Result<String> updateStatus(
+            @PathVariable("id") Long id,
+            @RequestParam("status")
+            @Min(value = 0, message = "状态只能是0或1")
+            @Max(value = 1, message = "状态只能是0或1") Integer status) {
         ServiceProject serviceProject = getExistingServiceProject(id);
         serviceProject.setStatus(status);
         serviceProject.setUpdateTime(LocalDateTime.now());

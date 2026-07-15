@@ -24,6 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -74,7 +75,7 @@ class AdminApiIntegrationTest {
                         .param("page", "1")
                         .param("pageSize", "1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.records[0].name").value("Bubble Cleaner"));
 
@@ -85,14 +86,14 @@ class AdminApiIntegrationTest {
                                 {"inventoryId":1001,"changeType":"stock_out","changeQuantity":2,"relatedOrderId":9001,"remark":"integration"}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(1));
+                .andExpect(jsonPath("$.code").value(200));
 
         InventorySku inventorySku = inventorySkuMapper.selectById(1001L);
         assertEquals(0, new BigDecimal("3.00").compareTo(inventorySku.getQuantity()));
 
         mockMvc.perform(get("/admin/permissions").header("token", token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data[0].permissionCode").exists());
     }
 
@@ -118,7 +119,7 @@ class AdminApiIntegrationTest {
                                 {"serviceProjectId":1001,"inventoryId":1001,"consumeQuantity":1.50,"status":1,"remark":"integration"}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.code").value(200))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
@@ -129,7 +130,7 @@ class AdminApiIntegrationTest {
                         .param("page", "1")
                         .param("pageSize", "10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.records[0].serviceProjectName").value("Basic Facial"))
                 .andExpect(jsonPath("$.data.records[0].inventoryName").value("Bubble Cleaner"))
@@ -138,7 +139,7 @@ class AdminApiIntegrationTest {
         mockMvc.perform(get("/admin/service-project-inventories/{id}", relationId)
                         .header("token", token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.consumeQuantity").value(1.5));
 
         mockMvc.perform(put("/admin/service-project-inventories/{id}", relationId)
@@ -148,7 +149,7 @@ class AdminApiIntegrationTest {
                                 {"serviceProjectId":1001,"inventoryId":1001,"consumeQuantity":2.00,"status":1,"remark":"updated"}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(1));
+                .andExpect(jsonPath("$.code").value(200));
 
         mockMvc.perform(get("/admin/service-project-inventories/{id}", relationId)
                         .header("token", token))
@@ -159,7 +160,7 @@ class AdminApiIntegrationTest {
         mockMvc.perform(delete("/admin/service-project-inventories/{id}", relationId)
                         .header("token", token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(1));
+                .andExpect(jsonPath("$.code").value(200));
 
         mockMvc.perform(get("/admin/service-project-inventories")
                         .header("token", token)
@@ -180,7 +181,7 @@ class AdminApiIntegrationTest {
                                 {"permissionCodes":["dashboard:view"],"useRoleDefault":false}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(1));
+                .andExpect(jsonPath("$.code").value(200));
 
         mockMvc.perform(get("/admin/users/2/permissions")
                         .header("token", token))
@@ -196,7 +197,7 @@ class AdminApiIntegrationTest {
                                 {"permissionCodes":[],"useRoleDefault":false}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(1));
+                .andExpect(jsonPath("$.code").value(200));
 
         mockMvc.perform(get("/admin/users/2/permissions")
                         .header("token", token))
@@ -212,7 +213,7 @@ class AdminApiIntegrationTest {
                                 {"permissionCodes":[],"useRoleDefault":true}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(1));
+                .andExpect(jsonPath("$.code").value(200));
 
         mockMvc.perform(get("/admin/users/2/permissions")
                         .header("token", token))
@@ -233,7 +234,7 @@ class AdminApiIntegrationTest {
                                 {"orderId":3001,"paymentMethod":"wechat","payAmount":60.00,"payStatus":1,"remark":"integration"}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.code").value(200))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
@@ -250,7 +251,7 @@ class AdminApiIntegrationTest {
         mockMvc.perform(patch("/admin/payment-records/{id}/void", paymentId)
                         .header("token", token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(1));
+                .andExpect(jsonPath("$.code").value(200));
 
         ServiceOrder voidedOrder = serviceOrderMapper.selectById(3001L);
         assertEquals(0, BigDecimal.ZERO.compareTo(voidedOrder.getPaidAmount()));
@@ -273,7 +274,7 @@ class AdminApiIntegrationTest {
                                 {"orderId":3001,"paymentMethod":"cash","payAmount":90.00,"payStatus":1}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(1));
+                .andExpect(jsonPath("$.code").value(200));
 
         mockMvc.perform(post("/admin/payment-records")
                         .header("token", token)
@@ -281,8 +282,8 @@ class AdminApiIntegrationTest {
                         .content("""
                                 {"orderId":3001,"paymentMethod":"cash","payAmount":20.00,"payStatus":1}
                                 """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(0));
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value(409));
 
         ServiceOrder order = serviceOrderMapper.selectById(3001L);
         assertEquals(0, new BigDecimal("90.00").compareTo(order.getPaidAmount()));
@@ -297,15 +298,15 @@ class AdminApiIntegrationTest {
         mockMvc.perform(patch("/admin/appointments/{id}/confirm", 4001L)
                         .header("token", token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(1));
+                .andExpect(jsonPath("$.code").value(200));
 
         Appointment confirmed = appointmentMapper.selectById(4001L);
         assertEquals(1, confirmed.getStatus());
 
         mockMvc.perform(patch("/admin/appointments/{id}/confirm", 4001L)
                         .header("token", token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(0));
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value(409));
     }
 
     @Test
@@ -314,11 +315,49 @@ class AdminApiIntegrationTest {
 
         mockMvc.perform(delete("/admin/appointments/{id}", 4002L)
                         .header("token", token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(0));
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value(409));
 
         Appointment appointment = appointmentMapper.selectById(4002L);
         assertEquals(0, appointment.getDeleted());
+    }
+
+    @Test
+    void validationErrorsUseUnifiedBadRequestResponse() throws Exception {
+        String invalidLoginResponse = mockMvc.perform(post("/admin/users/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"","password":""}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        JsonNode invalidLoginBody = objectMapper.readTree(invalidLoginResponse);
+        assertTrue(invalidLoginBody.has("code"));
+        assertTrue(invalidLoginBody.has("message"));
+        assertTrue(invalidLoginBody.has("data"));
+        assertTrue(invalidLoginBody.get("data").isNull());
+        assertFalse(invalidLoginBody.has("msg"));
+
+        String token = loginAndGetToken("admin");
+        mockMvc.perform(get("/admin/customers")
+                        .header("token", token)
+                        .param("page", "0")
+                        .param("pageSize", "10"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("页码不能小于1"));
+
+        mockMvc.perform(patch("/admin/inventory-skus/{id}/status", 1001L)
+                        .header("token", token)
+                        .param("status", "2"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("状态只能是0或1"));
     }
 
     private String loginAndGetToken(String username) throws Exception {
@@ -328,7 +367,7 @@ class AdminApiIntegrationTest {
                                 {"username":"%s","password":"123456"}
                                 """.formatted(username)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.code").value(200))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();

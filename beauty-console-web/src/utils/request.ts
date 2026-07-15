@@ -21,21 +21,23 @@ service.interceptors.request.use(
 service.interceptors.response.use(
   (response: any) => {
     const body = response.data || {}
-    if (body.status === 401 || body.code === 401) {
+    const code = Number(body.code)
+    if (response.status === 401 || code === 401) {
       router.replace('/login')
       return response
     }
-    if (body.code === 0) {
-      Message.error(body.msg || '操作失败')
+    if (body.code !== undefined && code !== 200) {
+      Message.error(body.message || '操作失败')
     }
     return response
   },
   (error: any) => {
-    if (error && error.response && error.response.status === 401) {
+    const response = error && error.response
+    const body = (response && response.data) || {}
+    if (response && response.status === 401) {
       router.replace('/login')
-    } else {
-      Message.error(error.message || '网络请求失败')
     }
+    Message.error(body.message || error.message || '网络请求失败')
     return Promise.reject(error)
   }
 )

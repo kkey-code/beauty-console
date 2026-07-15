@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.wkr.storecommon.common.PageResult;
 import com.wkr.storecommon.common.Result;
 import com.wkr.storecommon.exception.BusinessException;
+import com.wkr.storecommon.exception.SystemException;
 import com.wkr.storepojo.dto.CustomerProfileDTO;
 import com.wkr.storepojo.dto.CustomerProfilePageQueryDTO;
 import com.wkr.storepojo.entity.CustomerProfile;
@@ -55,7 +56,7 @@ public class CustomerProfileController {
 
     @GetMapping
     @Operation(summary = "分页查询客户列表")
-    public Result<PageResult<CustomerProfileVO>> list(CustomerProfilePageQueryDTO dto) {
+    public Result<PageResult<CustomerProfileVO>> list(@Valid CustomerProfilePageQueryDTO dto) {
         Page<CustomerProfile> page = new Page<>(dto.getPage(), dto.getPageSize());
 
         LambdaQueryWrapper<CustomerProfile> wrapper = new LambdaQueryWrapper<>();
@@ -108,7 +109,10 @@ public class CustomerProfileController {
         customerProfile.setUpdateTime(LocalDateTime.now());
 
         boolean saved = customerProfileService.save(customerProfile);
-        return saved ? Result.success() : Result.error("添加客户失败");
+        if (!saved) {
+            throw new SystemException("添加客户失败");
+        }
+        return Result.success();
     }
 
     @PutMapping("/{id}")
@@ -121,7 +125,10 @@ public class CustomerProfileController {
         customerProfile.setUpdateTime(LocalDateTime.now());
 
         boolean updated = customerProfileService.updateById(customerProfile);
-        return updated ? Result.success(true) : Result.error("修改客户失败");
+        if (!updated) {
+            throw new BusinessException("客户不存在或修改失败");
+        }
+        return Result.success(true);
     }
 
     @DeleteMapping("/{id}")
@@ -130,6 +137,9 @@ public class CustomerProfileController {
     public Result<Boolean> delete(@PathVariable("id") Long id) {
         deletionGuardService.assertCustomerCanDelete(id);
         boolean removed = customerProfileService.removeById(id);
-        return removed ? Result.success(true) : Result.error("删除客户失败");
+        if (!removed) {
+            throw new BusinessException("客户不存在或删除失败");
+        }
+        return Result.success(true);
     }
 }

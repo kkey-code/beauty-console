@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.wkr.storecommon.common.PageResult;
 import com.wkr.storecommon.common.Result;
 import com.wkr.storecommon.exception.BusinessException;
+import com.wkr.storecommon.exception.SystemException;
 import com.wkr.storepojo.dto.InventorySkuDTO;
 import com.wkr.storepojo.dto.InventorySkuPageQueryDTO;
 import com.wkr.storepojo.entity.InventorySku;
@@ -21,6 +22,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.StringUtils;
@@ -69,7 +72,7 @@ public class InventorySkuController {
 
     @GetMapping
     @Operation(summary = "分页查询库存物品")
-    public Result<PageResult<InventorySkuVO>> queryInventorySkus(InventorySkuPageQueryDTO dto) {
+    public Result<PageResult<InventorySkuVO>> queryInventorySkus(@Valid InventorySkuPageQueryDTO dto) {
         Page<InventorySku> page = new Page<>(dto.getPage(), dto.getPageSize());
 
         Page<InventorySku> pageResult = inventorySkuService.page(page, buildQueryWrapper(dto));
@@ -87,7 +90,7 @@ public class InventorySkuController {
 
     @GetMapping("/export")
     @Operation(summary = "导出库存物品 Excel")
-    public void export(InventorySkuPageQueryDTO dto, HttpServletResponse response) throws IOException {
+    public void export(@Valid InventorySkuPageQueryDTO dto, HttpServletResponse response) throws IOException {
         LambdaQueryWrapper<InventorySku> wrapper = buildQueryWrapper(dto);
         long total = inventorySkuService.count(wrapper);
         if (total > EXPORT_MAX_ROWS) {
@@ -148,13 +151,20 @@ public class InventorySkuController {
     @PatchMapping("/{id}/status")
     @Operation(summary = "修改状态")
     @AuditLog(action = "STATUS", target = "INVENTORY_SKU")
-    public Result<?> updateStatus(@PathVariable("id") Long id, @RequestParam("status") Integer status) {
+    public Result<?> updateStatus(
+            @PathVariable("id") Long id,
+            @RequestParam("status")
+            @Min(value = 0, message = "状态只能是0或1")
+            @Max(value = 1, message = "状态只能是0或1") Integer status) {
         InventorySku inventorySku = getExistingInventorySku(id);
         inventorySku.setStatus(status);
         inventorySku.setUpdateTime(LocalDateTime.now());
 
         boolean updated = inventorySkuService.updateById(inventorySku);
-        return updated ? Result.success() : Result.error("更新失败");
+        if (!updated) {
+            throw new SystemException("更新库存物品状态失败");
+        }
+        return Result.success();
     }
 
     @DeleteMapping("/{id}")
@@ -164,7 +174,10 @@ public class InventorySkuController {
         getExistingInventorySku(id);
         deletionGuardService.assertInventorySkuCanDelete(id);
         boolean removed = inventorySkuService.removeById(id);
-        return removed ? Result.success() : Result.error("删除失败");
+        if (!removed) {
+            throw new SystemException("删除库存物品失败");
+        }
+        return Result.success();
     }
 
     private InventorySku getExistingInventorySku(Long id) {

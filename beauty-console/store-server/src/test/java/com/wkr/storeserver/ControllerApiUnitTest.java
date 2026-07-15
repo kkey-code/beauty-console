@@ -489,7 +489,7 @@ class ControllerApiUnitTest {
     private ResultMatcher okWithCodeOne() {
         return result -> {
             status().isOk().match(result);
-            jsonPath("$.code").value(1).match(result);
+            jsonPath("$.code").value(200).match(result);
         };
     }
 

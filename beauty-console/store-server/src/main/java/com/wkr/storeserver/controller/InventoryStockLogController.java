@@ -52,7 +52,7 @@ public class InventoryStockLogController {
 
     @GetMapping
     @Operation(summary = "库存流水列表")
-    public Result<PageResult<InventoryStockLogVO>> list(InventoryStockLogPageQueryDTO dto) {
+    public Result<PageResult<InventoryStockLogVO>> list(@Valid InventoryStockLogPageQueryDTO dto) {
         Page<InventoryStockLog> page = new Page<>(dto.getPage(), dto.getPageSize());
         String changeType = StringUtils.hasText(dto.getChangeType()) ? normalizeChangeType(dto.getChangeType()) : null;
 

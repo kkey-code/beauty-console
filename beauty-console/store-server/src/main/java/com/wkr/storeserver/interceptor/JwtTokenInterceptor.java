@@ -117,7 +117,7 @@ public class JwtTokenInterceptor implements HandlerInterceptor {
         response.setStatus(status);
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json");
-        objectMapper.writeValue(response.getWriter(), Result.error(message));
+        objectMapper.writeValue(response.getWriter(), Result.error(status, message));
         return false;
     }
 

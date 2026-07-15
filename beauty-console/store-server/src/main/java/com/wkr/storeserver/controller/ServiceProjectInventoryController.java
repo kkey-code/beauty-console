@@ -59,7 +59,7 @@ public class ServiceProjectInventoryController {
 
     @GetMapping
     @Operation(summary = "分页查询服务项目耗材关系")
-    public Result<PageResult<ServiceProjectInventoryVO>> list(ServiceProjectInventoryPageQueryDTO dto) {
+    public Result<PageResult<ServiceProjectInventoryVO>> list(@Valid ServiceProjectInventoryPageQueryDTO dto) {
         Page<ServiceProjectInventory> page = new Page<>(dto.getPage(), dto.getPageSize());
         LambdaQueryWrapper<ServiceProjectInventory> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(dto.getServiceProjectId() != null,

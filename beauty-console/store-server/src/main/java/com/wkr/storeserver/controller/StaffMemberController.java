@@ -18,6 +18,8 @@ import com.wkr.storeserver.service.StaffMemberService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.StringUtils;
@@ -57,7 +59,7 @@ public class StaffMemberController {
 
     @GetMapping
     @Operation(summary = "分页查询员工列表")
-    public Result<PageResult<StaffMemberVO>> list(StaffMemberPageQueryDTO dto) {
+    public Result<PageResult<StaffMemberVO>> list(@Valid StaffMemberPageQueryDTO dto) {
         Page<StaffMember> pageQuery = new Page<>(dto.getPage(), dto.getPageSize());
 
         LambdaQueryWrapper<StaffMember> wrapper = new LambdaQueryWrapper<>();
@@ -125,7 +127,11 @@ public class StaffMemberController {
     @PatchMapping("/{id}/status")
     @Operation(summary = "修改员工状态")
     @AuditLog(action = "STATUS", target = "STAFF")
-    public Result<Boolean> updateStatus(@PathVariable("id") Long id, @RequestParam("status") Integer status) {
+    public Result<Boolean> updateStatus(
+            @PathVariable("id") Long id,
+            @RequestParam("status")
+            @Min(value = 0, message = "状态只能是0或1")
+            @Max(value = 1, message = "状态只能是0或1") Integer status) {
         StaffMember staffMember = new StaffMember();
         staffMember.setId(id);
         staffMember.setStatus(status);

@@ -78,7 +78,7 @@ export default class extends Vue {
       this.loading = true
       try {
         const res = await UserModule.Login(this.loginForm)
-        if (String(res.code) === '1') {
+        if (Number(res.code) === 200) {
           this.$router.push('/')
         }
       } finally {

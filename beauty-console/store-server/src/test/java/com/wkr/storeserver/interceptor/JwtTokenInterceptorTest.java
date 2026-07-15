@@ -78,6 +78,8 @@ class JwtTokenInterceptorTest {
 
         assertFalse(interceptor.preHandle(request, response, new Object()));
         assertEquals(403, response.getStatus());
+        assertTrue(response.getContentAsString(StandardCharsets.UTF_8).contains("\"code\":403"));
+        assertTrue(response.getContentAsString(StandardCharsets.UTF_8).contains("\"message\""));
         assertTrue(response.getContentAsString(StandardCharsets.UTF_8).contains("无权限访问该接口"));
         assertNull(BaseContext.getCurrentUser());
     }
@@ -89,6 +91,8 @@ class JwtTokenInterceptorTest {
 
         assertFalse(interceptor.preHandle(request, response, new Object()));
         assertEquals(401, response.getStatus());
+        assertTrue(response.getContentAsString(StandardCharsets.UTF_8).contains("\"code\":401"));
+        assertTrue(response.getContentAsString(StandardCharsets.UTF_8).contains("\"message\""));
         assertTrue(response.getContentAsString(StandardCharsets.UTF_8).contains("未登录或登录已过期"));
     }
 

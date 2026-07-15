@@ -7,7 +7,7 @@ export const login = (data: any) =>
     data
   })
 
-export const userLogout = () => Promise.resolve({ data: { code: 1 } })
+export const userLogout = () => Promise.resolve({ data: { code: 200, message: '操作成功', data: null } })
 
 export const getEmployeeList = (params: any) =>
   request({

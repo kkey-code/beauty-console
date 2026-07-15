@@ -2,6 +2,7 @@ package com.wkr.storeserver.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.wkr.storecommon.common.Result;
+import com.wkr.storecommon.exception.SystemException;
 import com.wkr.storepojo.dto.ServiceOrderItemDTO;
 import com.wkr.storepojo.entity.ServiceOrderItem;
 import com.wkr.storepojo.entity.StaffMember;
@@ -78,7 +79,7 @@ public class ServiceOrderItemController {
 
         boolean updated = serviceOrderItemService.updateById(serviceOrderItem);
         if (!updated) {
-            return Result.error("修改失败");
+            throw new SystemException("修改订单项目失败");
         }
         return Result.success(true);
     }
@@ -88,7 +89,7 @@ public class ServiceOrderItemController {
     public Result<Boolean> delete(@PathVariable("id") Long id) {
         boolean removed = serviceOrderItemService.removeById(id);
         if (!removed) {
-            return Result.error("删除失败");
+            throw new SystemException("删除订单项目失败");
         }
         return Result.success(true);
     }

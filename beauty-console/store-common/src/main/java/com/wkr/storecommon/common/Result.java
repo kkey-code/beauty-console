@@ -1,38 +1,49 @@
 package com.wkr.storecommon.common;
 
-import lombok.Data;
+import lombok.Getter;
 
 import java.io.Serializable;
 
 /**
- * 后端统一返回结果
- * @param <T>
+ * 后端统一响应体，固定输出 code、message 和 data。
+ *
+ * @param <T> 响应数据类型
  */
-@Data
-public class Result<T> implements Serializable {
+@Getter
+public final class Result<T> implements Serializable {
 
-    private Integer code; //编码：1成功，0和其它数字为失败
-    private String msg; //错误信息
-    private T data; //数据
+    private static final long serialVersionUID = 1L;
+
+    private final Integer code;
+    private final String message;
+    private final T data;
+
+    private Result(Integer code, String message, T data) {
+        this.code = code;
+        this.message = message;
+        this.data = data;
+    }
 
     public static <T> Result<T> success() {
-        Result<T> result = new Result<T>();
-        result.code = 1;
-        return result;
+        return success(null);
     }
 
-    public static <T> Result<T> success(T object) {
-        Result<T> result = new Result<T>();
-        result.data = object;
-        result.code = 1;
-        return result;
+    public static <T> Result<T> success(T data) {
+        return new Result<>(ResultCode.SUCCESS.getCode(), ResultCode.SUCCESS.getDefaultMessage(), data);
     }
 
-    public static <T> Result<T> error(String msg) {
-        Result result = new Result();
-        result.msg = msg;
-        result.code = 0;
-        return result;
+    public static <T> Result<T> error(String message) {
+        return error(ResultCode.BUSINESS_ERROR, message);
     }
 
+    public static <T> Result<T> error(ResultCode resultCode, String message) {
+        String resolvedMessage = message == null || message.isBlank()
+                ? resultCode.getDefaultMessage()
+                : message;
+        return new Result<>(resultCode.getCode(), resolvedMessage, null);
+    }
+
+    public static <T> Result<T> error(int code, String message) {
+        return new Result<>(code, message, null);
+    }
 }

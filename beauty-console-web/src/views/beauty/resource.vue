@@ -822,7 +822,7 @@ export default class extends Vue {
         pageSize: this.pageSize
       })
       const { data } = await listRecords(this.config.endpoint, params)
-      if (String(data.code) === '1') {
+      if (Number(data.code) === 200) {
         const payload = data.data || {}
         this.records = payload.records || []
         this.total = Number(payload.total || 0)
@@ -898,7 +898,7 @@ export default class extends Vue {
         const response = this.mode === 'edit'
           ? await updateRecord(this.config.endpoint, this.form.id, payload)
           : await createRecord(this.config.endpoint, payload)
-        if (String(response.data.code) === '1') {
+        if (Number(response.data.code) === 200) {
           this.$message.success('保存成功')
           this.dialogVisible = false
           this.loadData()
@@ -936,7 +936,7 @@ export default class extends Vue {
     const nextStatus = Number(row.status) === 1 ? 0 : 1
     await this.$confirm(`确认${nextStatus === 1 ? '启用' : '停用'}该记录？`, '提示', { type: 'warning' })
     const response = await updateStatus(this.config.endpoint, row.id, nextStatus, this.config.statusMode || 'query')
-    if (String(response.data.code) === '1') {
+    if (Number(response.data.code) === 200) {
       this.$message.success('状态已更新')
       this.loadData()
     }
@@ -951,7 +951,7 @@ export default class extends Vue {
     const response = action.action === 'toOrder'
       ? await createOrderFromAppointment(row.id)
       : await patchAction(this.config.endpoint, row.id, action.action)
-    if (String(response.data.code) === '1') {
+    if (Number(response.data.code) === 200) {
       this.$message.success('操作成功')
       this.loadData()
     }
@@ -1025,7 +1025,7 @@ export default class extends Vue {
         this.permissionRestoreDefault ? [] : this.permissionCodes,
         this.permissionRestoreDefault
       )
-      if (String(response.data.code) === '1') {
+      if (Number(response.data.code) === 200) {
         this.$message.success('权限已保存')
         this.permissionDialogVisible = false
       }
@@ -1037,7 +1037,7 @@ export default class extends Vue {
   private async removeRow(row: any) {
     await this.$confirm('确认删除该记录？', '提示', { type: 'warning' })
     const response = await deleteRecord(this.config.endpoint, row.id)
-    if (String(response.data.code) === '1') {
+    if (Number(response.data.code) === 200) {
       this.$message.success('删除成功')
       if (this.records.length === 1 && this.page > 1) {
         this.page -= 1
