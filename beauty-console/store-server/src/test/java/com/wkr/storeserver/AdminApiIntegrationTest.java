@@ -8,11 +8,13 @@ import com.wkr.storepojo.entity.InventorySku;
 import com.wkr.storepojo.entity.OperationAuditLog;
 import com.wkr.storepojo.entity.PaymentRecord;
 import com.wkr.storepojo.entity.ServiceOrder;
+import com.wkr.storepojo.entity.SysUser;
 import com.wkr.storeserver.mapper.AppointmentMapper;
 import com.wkr.storeserver.mapper.InventorySkuMapper;
 import com.wkr.storeserver.mapper.OperationAuditLogMapper;
 import com.wkr.storeserver.mapper.PaymentRecordMapper;
 import com.wkr.storeserver.mapper.ServiceOrderMapper;
+import com.wkr.storeserver.mapper.SysUserMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -22,6 +24,7 @@ import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -65,6 +68,42 @@ class AdminApiIntegrationTest {
 
     @Autowired
     private OperationAuditLogMapper operationAuditLogMapper;
+
+    @Autowired
+    private SysUserMapper sysUserMapper;
+
+    @Test
+    void unsafeJavaScriptLongIdIsReturnedAsExactStringAndCanQueryPermissions() throws Exception {
+        long unsafeUserId = 2_077_380_390_504_390_700L;
+        SysUser user = new SysUser();
+        user.setId(unsafeUserId);
+        user.setUsername("staff2");
+        user.setPasswordHash("$2a$10$8CNVvlRfFo6bTbYtxDLW1edK3my3Esj0rXuV.pKqhLX4zUKpdqrRC");
+        user.setRoleId(3);
+        user.setStaffId(2L);
+        user.setStatus(0);
+        user.setCreateTime(LocalDateTime.now());
+        user.setUpdateTime(LocalDateTime.now());
+        assertEquals(1, sysUserMapper.insert(user));
+
+        String token = loginAndGetToken("admin");
+        String exactId = Long.toString(unsafeUserId);
+
+        mockMvc.perform(get("/admin/users")
+                        .header("token", token)
+                        .param("page", "1")
+                        .param("pageSize", "10")
+                        .param("username", "staff2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.records[0].id").value(exactId));
+
+        mockMvc.perform(get("/admin/users/{id}/permissions", exactId)
+                        .header("token", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.userId").value(exactId));
+    }
 
     @Test
     void adminLoginPaginationAndOutboundInventoryUseRealDatabase() throws Exception {
