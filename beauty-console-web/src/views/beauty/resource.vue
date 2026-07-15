@@ -280,7 +280,9 @@ import { Component, Vue, Watch } from 'vue-property-decorator'
 import {
   createOrderFromAppointment,
   createRecord,
+  createServiceOrder,
   deleteRecord,
+  getOrderIdempotencyToken,
   getUserPermissions,
   listPermissions,
   listRecords,
@@ -727,6 +729,7 @@ export default class extends Vue {
   private records: any[] = []
   private loading = false
   private submitting = false
+  private orderIdempotencyToken = ''
   private dialogVisible = false
   private mode = 'create'
   private page = 1
@@ -870,12 +873,14 @@ export default class extends Vue {
 
   private openCreate() {
     this.mode = 'create'
+    this.orderIdempotencyToken = ''
     this.form = this.defaultModel(this.config.formFields || [])
     this.dialogVisible = true
   }
 
   private openEdit(row: any) {
     this.mode = 'edit'
+    this.orderIdempotencyToken = ''
     const form = this.defaultModel(this.config.formFields || [])
     const formFields = this.config.formFields || []
     formFields.forEach((field: any) => {
@@ -895,10 +900,17 @@ export default class extends Vue {
       this.submitting = true
       try {
         const payload = this.buildPayload()
+        if (this.mode === 'create' && this.config.endpoint === 'service-orders' && !this.orderIdempotencyToken) {
+          const tokenResponse = await getOrderIdempotencyToken()
+          this.orderIdempotencyToken = tokenResponse.data.data
+        }
         const response = this.mode === 'edit'
           ? await updateRecord(this.config.endpoint, this.form.id, payload)
-          : await createRecord(this.config.endpoint, payload)
+          : this.config.endpoint === 'service-orders'
+            ? await createServiceOrder(payload, this.orderIdempotencyToken)
+            : await createRecord(this.config.endpoint, payload)
         if (Number(response.data.code) === 200) {
+          this.orderIdempotencyToken = ''
           this.$message.success('保存成功')
           this.dialogVisible = false
           this.loadData()

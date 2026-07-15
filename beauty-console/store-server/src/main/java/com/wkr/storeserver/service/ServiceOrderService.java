@@ -24,7 +24,11 @@ public interface ServiceOrderService extends IService<ServiceOrder> {
 
     Long createOrder(ServiceOrderDTO dto);
 
+    Long createOrder(ServiceOrderDTO dto, String requestId);
+
     Long createFromAppointment(Long appointmentId);
+
+    Long createFromAppointment(Long appointmentId, String requestId);
 
     boolean updateOrder(Long id, ServiceOrderDTO dto);
 

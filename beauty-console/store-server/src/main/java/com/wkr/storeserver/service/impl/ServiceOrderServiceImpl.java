@@ -121,6 +121,16 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
     @Override
     @Transactional
     public Long createOrder(ServiceOrderDTO dto) {
+        return createOrder(dto, null);
+    }
+
+    @Override
+    @Transactional
+    public Long createOrder(ServiceOrderDTO dto, String requestId) {
+        Long existingOrderId = findOrderIdByRequestId(requestId);
+        if (existingOrderId != null) {
+            return existingOrderId;
+        }
         if (dto.getItems() == null || dto.getItems().isEmpty()) {
             throw new BusinessException("订单至少需要一条项目明细");
         }
@@ -128,6 +138,7 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
         ServiceOrder serviceOrder = new ServiceOrder();
         BeanUtils.copyProperties(dto, serviceOrder);
         fillOrderDefaults(serviceOrder);
+        serviceOrder.setRequestId(requestId);
         validateOrderAmount(serviceOrder, summarizeDTOItems(dto.getItems()));
 
         if (!save(serviceOrder)) {
@@ -141,6 +152,23 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
     @Override
     @Transactional
     public Long createFromAppointment(Long appointmentId) {
+        return createFromAppointment(appointmentId, null);
+    }
+
+    @Override
+    @Transactional
+    public Long createFromAppointment(Long appointmentId, String requestId) {
+        Long existingOrderId = findOrderIdByRequestId(requestId);
+        if (existingOrderId != null) {
+            return existingOrderId;
+        }
+        ServiceOrder appointmentOrder = getOne(new LambdaQueryWrapper<ServiceOrder>()
+                .eq(ServiceOrder::getAppointmentId, appointmentId)
+                .last("LIMIT 1"));
+        if (appointmentOrder != null) {
+            return appointmentOrder.getId();
+        }
+
         Appointment appointment = appointmentService.getById(appointmentId);
         if (appointment == null) {
             throw new BusinessException("预约不存在");
@@ -153,6 +181,7 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
         }
 
         ServiceOrder serviceOrder = buildOrderFromAppointment(appointment, appointmentItems);
+        serviceOrder.setRequestId(requestId);
         List<ServiceOrderItem> orderItems = appointmentItems.stream()
                 .map(appointmentItem -> buildOrderItemFromAppointmentItem(appointment, appointmentItem))
                 .collect(Collectors.toList());
@@ -692,6 +721,17 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
 
     private String generateOrderNo() {
         return BusinessNoGenerator.next("ORD");
+    }
+
+    private Long findOrderIdByRequestId(String requestId) {
+        if (requestId == null || requestId.isBlank()) {
+            return null;
+        }
+        ServiceOrder existing = getOne(new LambdaQueryWrapper<ServiceOrder>()
+                .select(ServiceOrder::getId)
+                .eq(ServiceOrder::getRequestId, requestId)
+                .last("LIMIT 1"));
+        return existing == null ? null : existing.getId();
     }
 
     private Integer payStatusOf(BigDecimal paidAmount, BigDecimal receivableAmount) {

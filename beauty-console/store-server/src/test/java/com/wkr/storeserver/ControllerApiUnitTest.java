@@ -44,6 +44,7 @@ import com.wkr.storeserver.controller.ServiceProjectInventoryController;
 import com.wkr.storeserver.controller.StaffMemberController;
 import com.wkr.storeserver.controller.SysUserController;
 import com.wkr.storeserver.handler.GlobalExceptionHandler;
+import com.wkr.storeserver.idempotency.OrderIdempotencyService;
 import com.wkr.storeserver.service.AppointmentItemService;
 import com.wkr.storeserver.service.AppointmentService;
 import com.wkr.storeserver.service.CustomerProfileService;
@@ -75,10 +76,12 @@ import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.function.Function;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -115,6 +118,8 @@ class ControllerApiUnitTest {
     @Mock
     private ServiceOrderService serviceOrderService;
     @Mock
+    private OrderIdempotencyService orderIdempotencyService;
+    @Mock
     private PaymentRecordService paymentRecordService;
     @Mock
     private InventoryStockLogService inventoryStockLogService;
@@ -141,7 +146,7 @@ class ControllerApiUnitTest {
                                 serviceProjectService,
                                 inventorySkuService),
                         new ServiceOrderItemController(serviceOrderItemService, staffMemberService),
-                        new ServiceOrderController(serviceOrderService),
+                        new ServiceOrderController(serviceOrderService, orderIdempotencyService),
                         new PaymentRecordController(paymentRecordService),
                         new InventoryStockLogController(inventoryStockLogService, inventorySkuService),
                         new InventorySkuController(inventorySkuService, deletionGuardService),
@@ -309,9 +314,15 @@ class ControllerApiUnitTest {
                 .andExpect(okWithCodeOne());
         mockMvc.perform(get("/admin/service-orders/1"))
                 .andExpect(okWithCodeOne());
-        mockMvc.perform(post("/admin/service-orders").contentType(MediaType.APPLICATION_JSON).content(serviceOrderJson()))
+        mockMvc.perform(post("/admin/service-orders/idempotency-token"))
                 .andExpect(okWithCodeOne());
-        mockMvc.perform(post("/admin/service-orders/from-appointment/1"))
+        mockMvc.perform(post("/admin/service-orders")
+                        .header(OrderIdempotencyService.IDEMPOTENCY_HEADER, "00000000-0000-0000-0000-000000000001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(serviceOrderJson()))
+                .andExpect(okWithCodeOne());
+        mockMvc.perform(post("/admin/service-orders/from-appointment/1")
+                        .header(OrderIdempotencyService.IDEMPOTENCY_HEADER, "00000000-0000-0000-0000-000000000002"))
                 .andExpect(okWithCodeOne());
         mockMvc.perform(put("/admin/service-orders/1").contentType(MediaType.APPLICATION_JSON).content(serviceOrderJson()))
                 .andExpect(okWithCodeOne());
@@ -321,6 +332,16 @@ class ControllerApiUnitTest {
                 .andExpect(okWithCodeOne());
         mockMvc.perform(delete("/admin/service-orders/1"))
                 .andExpect(okWithCodeOne());
+    }
+
+    @Test
+    void createOrderWithoutIdempotencyHeaderReturnsBadRequest() throws Exception {
+        mockMvc.perform(post("/admin/service-orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(serviceOrderJson()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("缺少必填请求头: Idempotency-Key"));
     }
 
     @Test
@@ -423,8 +444,14 @@ class ControllerApiUnitTest {
         when(inventorySkuService.count(any(Wrapper.class))).thenReturn(1L);
         when(serviceOrderService.getOrderItemsByOrderId(anyLong())).thenReturn(List.of(new ServiceOrderItemVO()));
         when(serviceOrderService.getPaymentRecordByOrderId(anyLong())).thenReturn(List.of(new PaymentRecordVO()));
-        when(serviceOrderService.createOrder(any(ServiceOrderDTO.class))).thenReturn(1L);
-        when(serviceOrderService.createFromAppointment(anyLong())).thenReturn(1L);
+        when(orderIdempotencyService.issueToken()).thenReturn("00000000-0000-0000-0000-000000000001");
+        when(orderIdempotencyService.execute(anyString(), any())).thenAnswer(invocation -> {
+            String token = invocation.getArgument(0);
+            Function<String, Long> action = invocation.getArgument(1);
+            return action.apply(token);
+        });
+        when(serviceOrderService.createOrder(any(ServiceOrderDTO.class), anyString())).thenReturn(1L);
+        when(serviceOrderService.createFromAppointment(anyLong(), anyString())).thenReturn(1L);
         when(serviceOrderService.updateOrder(anyLong(), any(ServiceOrderDTO.class))).thenReturn(true);
         when(serviceOrderService.cancel(anyLong())).thenReturn(true);
         when(serviceOrderService.finish(anyLong())).thenReturn(true);

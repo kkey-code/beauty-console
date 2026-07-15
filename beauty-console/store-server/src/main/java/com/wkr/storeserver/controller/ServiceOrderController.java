@@ -6,6 +6,7 @@ import com.wkr.storepojo.dto.ServiceOrderDTO;
 import com.wkr.storepojo.dto.ServiceOrderPageQueryDTO;
 import com.wkr.storepojo.vo.ServiceOrderVO;
 import com.wkr.storeserver.audit.AuditLog;
+import com.wkr.storeserver.idempotency.OrderIdempotencyService;
 import com.wkr.storeserver.ratelimit.RateLimiter;
 import com.wkr.storeserver.service.ServiceOrderService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -34,9 +36,13 @@ import java.util.concurrent.TimeUnit;
 public class ServiceOrderController {
 
     private final ServiceOrderService serviceOrderService;
+    private final OrderIdempotencyService orderIdempotencyService;
 
-    public ServiceOrderController(ServiceOrderService serviceOrderService) {
+    public ServiceOrderController(
+            ServiceOrderService serviceOrderService,
+            OrderIdempotencyService orderIdempotencyService) {
         this.serviceOrderService = serviceOrderService;
+        this.orderIdempotencyService = orderIdempotencyService;
     }
 
     @GetMapping
@@ -51,20 +57,34 @@ public class ServiceOrderController {
         return Result.success(serviceOrderService.getDetail(id));
     }
 
+    @PostMapping("/idempotency-token")
+    @Operation(summary = "获取下单幂等令牌")
+    public Result<String> issueIdempotencyToken() {
+        return Result.success(orderIdempotencyService.issueToken());
+    }
+
     @PostMapping
     @Operation(summary = "添加订单")
     @AuditLog(action = "CREATE", target = "SERVICE_ORDER")
     @RateLimiter(key = "service-order:create", maxRequests = 10, window = 1, timeUnit = TimeUnit.MINUTES)
-    public Result<Long> create(@Valid @RequestBody ServiceOrderDTO serviceOrderDTO) {
-        return Result.success(serviceOrderService.createOrder(serviceOrderDTO));
+    public Result<Long> create(
+            @RequestHeader(OrderIdempotencyService.IDEMPOTENCY_HEADER) String idempotencyToken,
+            @Valid @RequestBody ServiceOrderDTO serviceOrderDTO) {
+        return Result.success(orderIdempotencyService.execute(
+                idempotencyToken,
+                requestId -> serviceOrderService.createOrder(serviceOrderDTO, requestId)));
     }
 
     @PostMapping("/from-appointment/{appointmentId}")
     @Operation(summary = "从预约生成订单")
     @AuditLog(action = "CREATE_FROM_APPOINTMENT", target = "SERVICE_ORDER")
     @RateLimiter(key = "service-order:create", maxRequests = 10, window = 1, timeUnit = TimeUnit.MINUTES)
-    public Result<Long> createFromAppointment(@PathVariable("appointmentId") Long appointmentId) {
-        return Result.success(serviceOrderService.createFromAppointment(appointmentId));
+    public Result<Long> createFromAppointment(
+            @RequestHeader(OrderIdempotencyService.IDEMPOTENCY_HEADER) String idempotencyToken,
+            @PathVariable("appointmentId") Long appointmentId) {
+        return Result.success(orderIdempotencyService.execute(
+                idempotencyToken,
+                requestId -> serviceOrderService.createFromAppointment(appointmentId, requestId)));
     }
 
     @PutMapping("/{id}")

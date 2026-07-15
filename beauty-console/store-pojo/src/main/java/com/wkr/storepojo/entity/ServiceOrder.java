@@ -35,6 +35,9 @@ public class ServiceOrder implements Serializable {
     @ApiModelProperty("订单编号")
     private String orderNo;
 
+    @ApiModelProperty("下单幂等请求ID")
+    private String requestId;
+
     @ApiModelProperty("关联预约ID，可为空")
     private Long appointmentId;
 

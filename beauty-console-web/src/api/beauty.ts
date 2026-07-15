@@ -20,6 +20,25 @@ export const createRecord = (resource: string, data: any) =>
     data
   })
 
+export const getOrderIdempotencyToken = () =>
+  request({
+    url: '/admin/service-orders/idempotency-token',
+    method: 'post'
+  })
+
+const orderIdempotencyHeader = async () => {
+  const response = await getOrderIdempotencyToken()
+  return { 'Idempotency-Key': response.data.data }
+}
+
+export const createServiceOrder = (data: any, idempotencyToken: string) =>
+  request({
+    url: '/admin/service-orders',
+    method: 'post',
+    headers: { 'Idempotency-Key': idempotencyToken },
+    data
+  })
+
 export const updateRecord = (resource: string, id: number | string, data: any) =>
   request({
     url: `/admin/${resource}/${id}`,
@@ -54,10 +73,11 @@ export const updateStatus = (
     params: mode === 'query' ? { status } : undefined
   })
 
-export const createOrderFromAppointment = (appointmentId: number | string) =>
+export const createOrderFromAppointment = async (appointmentId: number | string) =>
   request({
     url: `/admin/service-orders/from-appointment/${appointmentId}`,
-    method: 'post'
+    method: 'post',
+    headers: await orderIdempotencyHeader()
   })
 
 export const listPermissions = () =>

@@ -53,7 +53,9 @@ class OpenApiDocumentationTest {
                 .isEqualTo("门店后台管理系统接口文档");
         assertThat(document.path("paths").path("/admin/service-orders").path("post")
                 .path("summary").asText()).isEqualTo("添加订单");
-        assertThat(countOperations(document.path("paths"))).isEqualTo(73);
+        assertThat(document.path("paths").path("/admin/service-orders/idempotency-token").path("post")
+                .path("summary").asText()).isEqualTo("获取下单幂等令牌");
+        assertThat(countOperations(document.path("paths"))).isEqualTo(74);
     }
 
     private int countOperations(JsonNode paths) {

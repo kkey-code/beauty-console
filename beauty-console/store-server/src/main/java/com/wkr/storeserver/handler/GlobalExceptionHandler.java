@@ -18,6 +18,7 @@ import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
@@ -117,6 +118,16 @@ public class GlobalExceptionHandler {
             HttpServletRequest request) {
         String message = "缺少必填参数: " + e.getParameterName();
         log.warn("Missing request parameter: method={}, uri={}, msg={}",
+                request.getMethod(), request.getRequestURI(), message);
+        return errorResponse(HttpStatus.BAD_REQUEST, message);
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<Result<?>> handleMissingRequestHeaderException(
+            MissingRequestHeaderException e,
+            HttpServletRequest request) {
+        String message = "缺少必填请求头: " + e.getHeaderName();
+        log.warn("Missing request header: method={}, uri={}, msg={}",
                 request.getMethod(), request.getRequestURI(), message);
         return errorResponse(HttpStatus.BAD_REQUEST, message);
     }
