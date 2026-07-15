@@ -228,7 +228,7 @@ INSERT INTO service_order_item (
 SELECT
     1000 + n,
     1000 + n,
-    CASE WHEN n % 11 = 0 THEN NULL ELSE 1000 + ((n * 5) % 100) + 1 END,
+    1000 + ((n * 5) % 100) + 1,
     CONCAT('Order Item ', LPAD(n, 3, '0')),
     80.00 + (n % 18) * 15.00,
     n % 3 + 1,

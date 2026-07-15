@@ -106,10 +106,7 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
         Page<ServiceOrder> page = new Page<>(dto.getPage(), dto.getPageSize());
         IPage<ServiceOrder> pageResult = page(page, wrapper);
 
-        List<ServiceOrderVO> list = new ArrayList<>();
-        for (ServiceOrder serviceOrder : pageResult.getRecords()) {
-            list.add(toVO(serviceOrder, true));
-        }
+        List<ServiceOrderVO> list = toPageVOs(pageResult.getRecords());
         return new PageResult<>(pageResult.getTotal(), list);
     }
 
@@ -260,15 +257,7 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
         Map<Long, String> staffNameById = loadStaffNames(staffIds);
 
         return itemList.stream()
-                .map(item -> {
-                    ServiceOrderItemVO itemVO = new ServiceOrderItemVO();
-                    BeanUtils.copyProperties(item, itemVO);
-                    Long staffId = item.getStaffId();
-                    if (staffId != null) {
-                        itemVO.setStaffName(staffNameById.get(staffId));
-                    }
-                    return itemVO;
-                })
+                .map(item -> toOrderItemVO(item, staffNameById))
                 .collect(Collectors.toList());
     }
 
@@ -279,11 +268,7 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
         List<PaymentRecord> paymentRecordList = paymentRecordService.list(wrapper);
 
         return paymentRecordList.stream()
-                .map(item -> {
-                    PaymentRecordVO paymentRecordVO = new PaymentRecordVO();
-                    BeanUtils.copyProperties(item, paymentRecordVO);
-                    return paymentRecordVO;
-                })
+                .map(this::toPaymentRecordVO)
                 .collect(Collectors.toList());
     }
 
@@ -680,11 +665,111 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
         inventoryStockLogService.recordStockChange(dto, changeType.getCode());
     }
 
+    private List<ServiceOrderVO> toPageVOs(List<ServiceOrder> serviceOrders) {
+        if (serviceOrders == null || serviceOrders.isEmpty()) {
+            return List.of();
+        }
+
+        Set<Long> orderIds = serviceOrders.stream()
+                .map(ServiceOrder::getId)
+                .filter(id -> id != null)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Set<Long> customerIds = serviceOrders.stream()
+                .map(ServiceOrder::getCustomerId)
+                .filter(id -> id != null)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        Map<Long, CustomerProfile> customerById = loadCustomers(customerIds);
+        Map<Long, List<ServiceOrderItemVO>> itemsByOrderId = loadOrderItems(orderIds);
+        Map<Long, List<PaymentRecordVO>> paymentsByOrderId = loadPayments(orderIds);
+
+        return serviceOrders.stream()
+                .map(serviceOrder -> {
+                    ServiceOrderVO serviceOrderVO = toBasicVO(
+                            serviceOrder,
+                            customerById.get(serviceOrder.getCustomerId()));
+                    serviceOrderVO.setItems(itemsByOrderId.getOrDefault(serviceOrder.getId(), List.of()));
+                    serviceOrderVO.setPayments(paymentsByOrderId.getOrDefault(serviceOrder.getId(), List.of()));
+                    return serviceOrderVO;
+                })
+                .toList();
+    }
+
+    private Map<Long, CustomerProfile> loadCustomers(Set<Long> customerIds) {
+        if (customerIds.isEmpty()) {
+            return Map.of();
+        }
+        Collection<CustomerProfile> customers = customerProfileService.listByIds(customerIds);
+        if (customers == null || customers.isEmpty()) {
+            return Map.of();
+        }
+        return customers.stream()
+                .filter(customer -> customer.getId() != null)
+                .collect(Collectors.toMap(
+                        CustomerProfile::getId,
+                        customer -> customer,
+                        (left, right) -> left,
+                        LinkedHashMap::new));
+    }
+
+    private Map<Long, List<ServiceOrderItemVO>> loadOrderItems(Set<Long> orderIds) {
+        if (orderIds.isEmpty()) {
+            return Map.of();
+        }
+        List<ServiceOrderItem> orderItems = serviceOrderItemService.list(
+                new LambdaQueryWrapper<ServiceOrderItem>().in(ServiceOrderItem::getOrderId, orderIds));
+        if (orderItems == null || orderItems.isEmpty()) {
+            return Map.of();
+        }
+
+        Set<Long> staffIds = orderItems.stream()
+                .map(ServiceOrderItem::getStaffId)
+                .filter(id -> id != null)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Map<Long, String> staffNameById = loadStaffNames(staffIds);
+
+        return orderItems.stream()
+                .filter(item -> item.getOrderId() != null)
+                .collect(Collectors.groupingBy(
+                        ServiceOrderItem::getOrderId,
+                        LinkedHashMap::new,
+                        Collectors.mapping(
+                                item -> toOrderItemVO(item, staffNameById),
+                                Collectors.toList())));
+    }
+
+    private Map<Long, List<PaymentRecordVO>> loadPayments(Set<Long> orderIds) {
+        if (orderIds.isEmpty()) {
+            return Map.of();
+        }
+        List<PaymentRecord> paymentRecords = paymentRecordService.list(
+                new LambdaQueryWrapper<PaymentRecord>().in(PaymentRecord::getOrderId, orderIds));
+        if (paymentRecords == null || paymentRecords.isEmpty()) {
+            return Map.of();
+        }
+        return paymentRecords.stream()
+                .filter(payment -> payment.getOrderId() != null)
+                .collect(Collectors.groupingBy(
+                        PaymentRecord::getOrderId,
+                        LinkedHashMap::new,
+                        Collectors.mapping(this::toPaymentRecordVO, Collectors.toList())));
+    }
+
     private ServiceOrderVO toVO(ServiceOrder serviceOrder, boolean includeChildren) {
+        CustomerProfile customerProfile = customerProfileService.getById(serviceOrder.getCustomerId());
+        ServiceOrderVO serviceOrderVO = toBasicVO(serviceOrder, customerProfile);
+
+        if (includeChildren) {
+            serviceOrderVO.setItems(getOrderItemsByOrderId(serviceOrder.getId()));
+            serviceOrderVO.setPayments(getPaymentRecordByOrderId(serviceOrder.getId()));
+        }
+        return serviceOrderVO;
+    }
+
+    private ServiceOrderVO toBasicVO(ServiceOrder serviceOrder, CustomerProfile customerProfile) {
         ServiceOrderVO serviceOrderVO = new ServiceOrderVO();
         BeanUtils.copyProperties(serviceOrder, serviceOrderVO);
 
-        CustomerProfile customerProfile = customerProfileService.getById(serviceOrder.getCustomerId());
         if (customerProfile != null) {
             serviceOrderVO.setCustomerName(customerProfile.getName());
             serviceOrderVO.setCustomerPhone(customerProfile.getPhone());
@@ -694,12 +779,24 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
         serviceOrderVO.setOrderStatusName(OrderStatusEnum.labelOf(serviceOrder.getOrderStatus()));
         serviceOrderVO.setDebtStatusName(DebtStatusEnum.labelOf(serviceOrder.getDebtStatus()));
         serviceOrderVO.setPayStatusName(PayStatusEnum.labelOf(serviceOrder.getPayStatus()));
-
-        if (includeChildren) {
-            serviceOrderVO.setItems(getOrderItemsByOrderId(serviceOrder.getId()));
-            serviceOrderVO.setPayments(getPaymentRecordByOrderId(serviceOrder.getId()));
-        }
         return serviceOrderVO;
+    }
+
+    private ServiceOrderItemVO toOrderItemVO(
+            ServiceOrderItem item,
+            Map<Long, String> staffNameById) {
+        ServiceOrderItemVO itemVO = new ServiceOrderItemVO();
+        BeanUtils.copyProperties(item, itemVO);
+        if (item.getStaffId() != null) {
+            itemVO.setStaffName(staffNameById.get(item.getStaffId()));
+        }
+        return itemVO;
+    }
+
+    private PaymentRecordVO toPaymentRecordVO(PaymentRecord paymentRecord) {
+        PaymentRecordVO paymentRecordVO = new PaymentRecordVO();
+        BeanUtils.copyProperties(paymentRecord, paymentRecordVO);
+        return paymentRecordVO;
     }
 
     private Map<Long, String> loadStaffNames(Set<Long> staffIds) {
