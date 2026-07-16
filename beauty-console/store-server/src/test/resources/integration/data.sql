@@ -64,7 +64,9 @@ INSERT INTO sys_permission (
     (1027, 'appointments:view', '预约查看', '预约管理', 'GET', '/admin/appointments/**', '/appointments', 'appointments:view', 1, NOW(), NOW()),
     (1038, 'serviceOrders:view', '订单查看', '订单管理', 'GET', '/admin/service-orders/**', '/service-orders', 'serviceOrders:view', 1, NOW(), NOW()),
     (1051, 'users:view', '账号查看', '账号权限', 'GET', '/admin/users/**', '/users', 'users:view', 1, NOW(), NOW()),
-    (1057, 'permissions:view', '权限点查看', '账号权限', 'GET', '/admin/permissions/**', NULL, 'permissions:view', 1, NOW(), NOW());
+    (1057, 'permissions:view', '权限点查看', '账号权限', 'GET', '/admin/permissions/**', NULL, 'permissions:view', 1, NOW(), NOW()),
+    (1058, 'roles:permissions', '角色默认权限配置', '账号权限', '*', '/admin/permissions/roles/**', NULL, 'roles:permissions', 1, NOW(), NOW()),
+    (1059, 'users:resetPassword', '账号密码重置', '账号权限', 'PATCH', '/admin/users/*/reset-password', NULL, 'users:resetPassword', 1, NOW(), NOW());
 
 INSERT INTO sys_role_permission (role_id, permission_id, create_time)
 VALUES
@@ -77,6 +79,8 @@ VALUES
     (1, 1024, NOW()),
     (1, 1051, NOW()),
     (1, 1057, NOW()),
+    (1, 1058, NOW()),
+    (1, 1059, NOW()),
     (4, 1001, NOW()),
     (4, 1016, NOW()),
     (4, 1026, NOW()),

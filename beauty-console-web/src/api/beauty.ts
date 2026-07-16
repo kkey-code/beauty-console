@@ -110,3 +110,16 @@ export const updateUserPermissions = (
     method: 'put',
     data: { permissionCodes, useRoleDefault }
   })
+
+export const getRolePermissions = (roleId: number) =>
+  request({
+    url: `/admin/permissions/roles/${roleId}`,
+    method: 'get'
+  })
+
+export const updateRolePermissions = (roleId: number, permissionCodes: string[]) =>
+  request({
+    url: `/admin/permissions/roles/${roleId}`,
+    method: 'put',
+    data: { permissionCodes }
+  })

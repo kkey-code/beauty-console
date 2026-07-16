@@ -15,6 +15,7 @@ import com.wkr.storepojo.vo.StaffMemberVO;
 import com.wkr.storeserver.audit.AuditLog;
 import com.wkr.storeserver.service.DeletionGuardService;
 import com.wkr.storeserver.service.StaffMemberService;
+import com.wkr.storeserver.service.SysUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -33,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -49,12 +51,15 @@ public class StaffMemberController {
 
     private final StaffMemberService staffMemberService;
     private final DeletionGuardService deletionGuardService;
+    private final SysUserService sysUserService;
 
     public StaffMemberController(
             StaffMemberService staffMemberService,
-            DeletionGuardService deletionGuardService) {
+            DeletionGuardService deletionGuardService,
+            SysUserService sysUserService) {
         this.staffMemberService = staffMemberService;
         this.deletionGuardService = deletionGuardService;
+        this.sysUserService = sysUserService;
     }
 
     @GetMapping
@@ -95,6 +100,7 @@ public class StaffMemberController {
     @PostMapping
     @Operation(summary = "添加员工")
     @AuditLog(action = "CREATE", target = "STAFF")
+    @Transactional
     public Result<Boolean> add(@Valid @RequestBody StaffMemberDTO staffMemberDTO) {
         StaffMember staffMember = new StaffMember();
         BeanUtils.copyProperties(staffMemberDTO, staffMember);
@@ -105,6 +111,10 @@ public class StaffMemberController {
         if (!saved) {
             throw new BusinessException("添加员工失败");
         }
+        sysUserService.createForStaff(
+                staffMember,
+                staffMemberDTO.getAccountUsername(),
+                staffMemberDTO.getAccountRoleId());
         return Result.success(true);
     }
 
@@ -141,6 +151,7 @@ public class StaffMemberController {
         if (!updated) {
             throw new SystemException("修改员工状态失败");
         }
+        sysUserService.syncStatusForStaff(id, status);
         return Result.success(true);
     }
 

@@ -34,6 +34,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 import java.time.LocalDateTime;
 
@@ -100,7 +103,10 @@ public class SysUserController {
         sysUserService.validateStaffBinding(null, sysUserDTO.getRoleId(), sysUserDTO.getStaffId());
         SysUser sysUser = new SysUser();
         BeanUtils.copyProperties(sysUserDTO, sysUser);
-        sysUser.setPasswordHash(encodePasswordIfNecessary(sysUserDTO.getPasswordHash()));
+        String rawPassword = StringUtils.hasText(sysUserDTO.getPasswordHash())
+                ? sysUserDTO.getPasswordHash()
+                : SysUserService.DEFAULT_PASSWORD;
+        sysUser.setPasswordHash(encodePasswordIfNecessary(rawPassword));
         sysUser.setCreateTime(LocalDateTime.now());
         sysUser.setUpdateTime(LocalDateTime.now());
 
@@ -114,7 +120,12 @@ public class SysUserController {
     @PutMapping("/{id}")
     @Operation(summary = "修改用户")
     @AuditLog(action = "UPDATE", target = "USER")
+    @Transactional
     public Result<?> update(@PathVariable("id") Long id, @Valid @RequestBody SysUserDTO sysUserDTO) {
+        SysUser existing = sysUserService.getById(id);
+        if (existing == null) {
+            throw new BusinessException("用户不存在");
+        }
         sysUserService.validateStaffBinding(id, sysUserDTO.getRoleId(), sysUserDTO.getStaffId());
         SysUser sysUser = new SysUser();
         BeanUtils.copyProperties(sysUserDTO, sysUser);
@@ -125,6 +136,12 @@ public class SysUserController {
         boolean updated = sysUserService.updateById(sysUser);
         if (!updated) {
             throw new SystemException("修改用户失败");
+        }
+        if (!existing.getRoleId().equals(sysUserDTO.getRoleId())) {
+            UserPermissionDTO roleDefault = new UserPermissionDTO();
+            roleDefault.setPermissionCodes(List.of());
+            roleDefault.setUseRoleDefault(true);
+            permissionPointService.updateUserPermissions(id, roleDefault);
         }
         return Result.success();
     }
@@ -140,6 +157,14 @@ public class SysUserController {
                 ? status
                 : sysUserStatusDTO == null ? null : sysUserStatusDTO.getStatus();
         sysUserService.updateStatus(id, targetStatus);
+        return Result.success();
+    }
+
+    @PatchMapping("/{id}/reset-password")
+    @Operation(summary = "将账号密码重置为默认密码123456")
+    @AuditLog(action = "RESET_PASSWORD", target = "USER")
+    public Result<?> resetPassword(@PathVariable("id") Long id) {
+        sysUserService.resetPassword(id);
         return Result.success();
     }
 

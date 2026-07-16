@@ -122,7 +122,7 @@ export default class extends Vue {
   ]
 
   get visibleQuickLinks() {
-    return this.quickLinks.filter((item: any) => this.canViewOrAction(item.resource, item.action))
+    return this.quickLinks.filter((item: any) => this.canViewOrAction(item.resource, 'view'))
   }
 
   get isStaffSelfScope() {

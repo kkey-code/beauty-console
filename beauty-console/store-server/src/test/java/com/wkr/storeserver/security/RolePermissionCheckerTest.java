@@ -27,7 +27,7 @@ class RolePermissionCheckerTest {
     @Test
     void readonlyCanOnlyRead() {
         assertTrue(checker.isAllowed(RoleEnum.READONLY, "GET", "/admin/payment-records"));
-        assertTrue(checker.isAllowed(RoleEnum.READONLY, "HEAD", "/admin/users/1"));
+        assertFalse(checker.isAllowed(RoleEnum.READONLY, "HEAD", "/admin/users/1"));
         assertFalse(checker.isAllowed(RoleEnum.READONLY, "POST", "/admin/customers"));
     }
 
@@ -46,6 +46,7 @@ class RolePermissionCheckerTest {
 
     @Test
     void inventoryAdminCanOnlyAccessInventoryApis() {
+        assertTrue(checker.isAllowed(RoleEnum.INVENTORY_ADMIN, "GET", "/admin/dashboard/overview"));
         assertTrue(checker.isAllowed(RoleEnum.INVENTORY_ADMIN, "GET", "/admin/inventory-skus"));
         assertTrue(checker.isAllowed(RoleEnum.INVENTORY_ADMIN, "POST", "/admin/inventory-stock-logs/inbound"));
         assertTrue(checker.isAllowed(RoleEnum.INVENTORY_ADMIN, "POST", "/admin/service-project-inventories"));
@@ -56,6 +57,7 @@ class RolePermissionCheckerTest {
 
     @Test
     void financeCanOperatePaymentsAndReadRelatedBusinessData() {
+        assertTrue(checker.isAllowed(RoleEnum.FINANCE, "GET", "/admin/dashboard/overview"));
         assertTrue(checker.isAllowed(RoleEnum.FINANCE, "POST", "/admin/payment-records"));
         assertTrue(checker.isAllowed(RoleEnum.FINANCE, "PATCH", "/admin/payment-records/1/void"));
         assertTrue(checker.isAllowed(RoleEnum.FINANCE, "GET", "/admin/service-orders/1"));
@@ -75,12 +77,14 @@ class RolePermissionCheckerTest {
         PermissionPointService permissionPointService = mock(PermissionPointService.class);
         when(permissionPointService.isPermissionModelReady()).thenReturn(true);
         when(permissionPointService.listEffectiveRules(1001L, RoleEnum.STAFF)).thenReturn(List.of(
-                new PermissionRule("GET", "/admin/customers/**")
+                new PermissionRule("GET", "/admin/customers/**"),
+                new PermissionRule("GET", "/admin/users/**")
         ));
 
         RolePermissionChecker dbChecker = new RolePermissionChecker(permissionPointService);
 
         assertTrue(dbChecker.isAllowed(RoleEnum.STAFF, 1001L, "GET", "/admin/customers/1"));
         assertFalse(dbChecker.isAllowed(RoleEnum.STAFF, 1001L, "POST", "/admin/customers"));
+        assertFalse(dbChecker.isAllowed(RoleEnum.STAFF, 1001L, "GET", "/admin/users"));
     }
 }

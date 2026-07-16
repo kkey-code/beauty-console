@@ -36,10 +36,9 @@ export const hasAnyRole = (roles: string[] = [], allowedRoles: string[] = ALL_RO
 export const canVisitRoute = (route: Route | RouteConfig, roles: string[], permissions: string[] = []) => {
   const meta: any = route.meta || {}
   const permissionCodes = normalizePermissions(permissions)
-  if (meta.permission && permissionCodes.length > 0) {
-    return permissionCodes.includes(meta.permission)
-  }
-  return !meta.roles || hasAnyRole(roles, meta.roles)
+  const roleAllowed = !meta.roles || hasAnyRole(roles, meta.roles)
+  const permissionAllowed = !meta.permission || permissionCodes.includes(meta.permission)
+  return roleAllowed && permissionAllowed
 }
 
 export const filterRoutesByRole = (routes: RouteConfig[], roles: string[], permissions: string[] = []) =>
@@ -100,6 +99,12 @@ const resourceActionPermissionCodes: any = {
     cancel: 'appointments:cancel',
     toOrder: 'appointments:toOrder'
   },
+  appointmentItems: {
+    view: 'appointmentItems:view',
+    create: 'appointmentItems:create',
+    edit: 'appointmentItems:edit',
+    delete: 'appointmentItems:delete'
+  },
   serviceOrders: {
     view: 'serviceOrders:view',
     create: 'serviceOrders:create',
@@ -119,7 +124,9 @@ const resourceActionPermissionCodes: any = {
     edit: 'users:edit',
     status: 'users:status',
     delete: 'users:delete',
-    permissions: 'users:permissions'
+    permissions: 'users:permissions',
+    rolePermissions: 'roles:permissions',
+    resetPassword: 'users:resetPassword'
   }
 }
 
@@ -170,6 +177,12 @@ const resourcePermissions: any = {
     cancel: ['SUPER_ADMIN', 'STORE_MANAGER', 'STAFF'],
     toOrder: ['SUPER_ADMIN', 'STORE_MANAGER', 'STAFF']
   },
+  appointmentItems: {
+    view: ['SUPER_ADMIN', 'STORE_MANAGER', 'STAFF', 'READONLY'],
+    create: ['SUPER_ADMIN', 'STORE_MANAGER', 'STAFF'],
+    edit: ['SUPER_ADMIN', 'STORE_MANAGER', 'STAFF'],
+    delete: ['SUPER_ADMIN', 'STORE_MANAGER', 'STAFF']
+  },
   serviceOrders: {
     view: ['SUPER_ADMIN', 'STORE_MANAGER', 'STAFF', 'FINANCE', 'READONLY'],
     create: ['SUPER_ADMIN', 'STORE_MANAGER', 'STAFF'],
@@ -189,7 +202,9 @@ const resourcePermissions: any = {
     edit: ADMIN_ROLES,
     status: ADMIN_ROLES,
     delete: ADMIN_ROLES,
-    permissions: ADMIN_ROLES
+    permissions: ADMIN_ROLES,
+    rolePermissions: ADMIN_ROLES,
+    resetPassword: ADMIN_ROLES
   }
 }
 
@@ -201,13 +216,11 @@ export const canUseResourceAction = (
 ) => {
   const permissionCodes = normalizePermissions(permissions)
   const permissionCode = (resourceActionPermissionCodes[resource] || {})[action]
-  if (permissionCode && permissionCodes.length > 0) {
-    return permissionCodes.includes(permissionCode)
-  }
-
   const config = resourcePermissions[resource]
   if (!config) {
-    return hasAnyRole(roles, ADMIN_ROLES)
+    return false
   }
-  return hasAnyRole(roles, config[action] || [])
+  const roleAllowed = hasAnyRole(roles, config[action] || [])
+  const permissionAllowed = !permissionCode || permissionCodes.includes(permissionCode)
+  return roleAllowed && permissionAllowed
 }

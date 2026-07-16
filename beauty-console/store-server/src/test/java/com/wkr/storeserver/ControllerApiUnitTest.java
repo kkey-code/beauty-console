@@ -140,7 +140,7 @@ class ControllerApiUnitTest {
         mockMvc = MockMvcBuilders.standaloneSetup(
                         new SysUserController(sysUserService, passwordEncoder, permissionPointService),
                         new PermissionController(permissionPointService),
-                        new StaffMemberController(staffMemberService, deletionGuardService),
+                        new StaffMemberController(staffMemberService, deletionGuardService, sysUserService),
                         new ServiceProjectController(serviceProjectService, deletionGuardService),
                         new ServiceProjectInventoryController(
                                 serviceProjectInventoryService,

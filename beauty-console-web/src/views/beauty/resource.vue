@@ -6,6 +6,13 @@
         <h1>{{ config.title }}</h1>
       </div>
       <div class="heading-actions">
+        <el-button
+          v-if="resourceKey === 'users'"
+          icon="el-icon-s-custom"
+          @click="openRolePermissionDialog"
+        >
+          配置角色默认权限
+        </el-button>
         <el-button icon="el-icon-refresh" :loading="loading" :disabled="loading" @click="loadData">
           刷新
         </el-button>
@@ -372,6 +379,60 @@
         </el-button>
       </div>
     </el-dialog>
+
+    <el-dialog
+      title="角色默认权限"
+      :visible.sync="rolePermissionDialogVisible"
+      width="760px"
+      custom-class="rounded-dialog permission-dialog"
+    >
+      <div v-loading="rolePermissionLoading" class="permission-body">
+        <div class="permission-target role-permission-target">
+          <div>
+            <strong>选择角色</strong>
+            <span>新账号默认继承这里的权限，账号仍可单独覆盖</span>
+          </div>
+          <el-select v-model="rolePermissionRoleId" @change="loadRoleDefaultPermissions">
+            <el-option
+              v-for="role in configurableRoleOptions"
+              :key="role.value"
+              :label="role.label"
+              :value="role.value"
+            />
+          </el-select>
+        </div>
+        <el-checkbox-group v-model="rolePermissionCodes" class="permission-checks">
+          <div
+            v-for="group in rolePermissionGroups"
+            :key="group.name"
+            class="permission-group"
+          >
+            <h4>{{ group.name }}</h4>
+            <div class="permission-options">
+              <el-checkbox
+                v-for="permission in group.items"
+                :key="permission.permissionCode"
+                :label="permission.permissionCode"
+                border
+              >
+                {{ permission.permissionName || permission.permissionCode }}
+              </el-checkbox>
+            </div>
+          </div>
+        </el-checkbox-group>
+      </div>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="rolePermissionCodes = []">
+          清空权限
+        </el-button>
+        <el-button @click="rolePermissionDialogVisible = false">
+          取消
+        </el-button>
+        <el-button type="primary" :loading="rolePermissionSubmitting" @click="submitRoleDefaultPermissions">
+          保存角色默认权限
+        </el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -384,12 +445,14 @@ import {
   createServiceOrder,
   deleteRecord,
   getOrderIdempotencyToken,
+  getRolePermissions,
   getUserPermissions,
   listPermissions,
   listRecords,
   patchAction,
   updateRecord,
   updateStatus,
+  updateRolePermissions,
   updateUserPermissions
 } from '@/api/beauty'
 import { UserModule } from '@/store/modules/user'
@@ -549,6 +612,21 @@ const resourceConfigs: any = {
       { prop: 'phone', label: '手机号' },
       { prop: 'gender', label: '性别', type: 'select', options: genderOptions },
       { prop: 'position', label: '岗位' },
+      {
+        prop: 'accountUsername',
+        label: '登录账号',
+        placeholder: '不填则自动生成 emp+员工ID',
+        createOnly: true
+      },
+      {
+        prop: 'accountRoleId',
+        label: '账号角色',
+        type: 'select',
+        options: roleOptions,
+        default: 3,
+        required: true,
+        createOnly: true
+      },
       { prop: 'status', label: '状态', type: 'select', options: enabledOptions, default: 1, required: true },
       { prop: 'remark', label: '备注', type: 'textarea' }
     ]
@@ -788,17 +866,23 @@ const resourceConfigs: any = {
     ]
   },
   users: {
-    title: '员工账号与权限',
+    title: '员工账号与角色权限',
     shortTitle: '账号',
     group: '人员与权限',
     endpoint: 'users',
-    creatable: true,
-    editable: false,
-    deletable: true,
+    creatable: false,
+    editable: true,
+    deletable: false,
     statusAction: true,
     statusMode: 'body',
     rowActions: [
-      { label: '配置权限', action: 'permissions' }
+      { label: '账号权限', action: 'permissions' },
+      {
+        label: '重置密码',
+        action: 'reset-password',
+        permissionAction: 'resetPassword',
+        message: '确认将该账号密码重置为 123456？'
+      }
     ],
     searchFields: [
       { prop: 'username', label: '账号' },
@@ -815,16 +899,8 @@ const resourceConfigs: any = {
     ],
     formFields: [
       { prop: 'username', label: '账号', required: true },
-      { prop: 'passwordHash', label: '密码', required: true },
       { prop: 'roleId', label: '角色', type: 'select', options: roleOptions, default: 3, required: true },
-      {
-        prop: 'staffId',
-        label: '关联员工',
-        type: 'select',
-        optionSource: 'staffMembers',
-        placeholder: '请选择尚未绑定账号的员工',
-        required: true
-      },
+      { prop: 'staffId', label: '关联员工ID', type: 'number', disabled: true, required: true },
       { prop: 'status', label: '状态', type: 'select', options: enabledOptions, default: 1, required: true }
     ]
   }
@@ -853,6 +929,12 @@ export default class extends Vue {
   private permissionRoleDefaultCodes: string[] = []
   private permissionRestoreDefault = false
   private permissionGroups: any[] = []
+  private rolePermissionDialogVisible = false
+  private rolePermissionLoading = false
+  private rolePermissionSubmitting = false
+  private rolePermissionRoleId = 2
+  private rolePermissionCodes: string[] = []
+  private rolePermissionGroups: any[] = []
   private appointmentItemDialogVisible = false
   private appointmentItemLoading = false
   private appointmentItemSubmitting = false
@@ -880,24 +962,23 @@ export default class extends Vue {
   }
 
   get canCreate() {
-    return this.config.creatable && this.canUseAction('create')
+    return Boolean(this.config.creatable)
   }
 
   get canEdit() {
-    return this.config.editable && this.canUseAction('edit')
+    return Boolean(this.config.editable)
   }
 
   get canDelete() {
-    return this.config.deletable && this.canUseAction('delete')
+    return Boolean(this.config.deletable)
   }
 
   get canStatus() {
-    return this.config.statusAction && this.canUseAction('status')
+    return Boolean(this.config.statusAction)
   }
 
   get permittedRowActions() {
-    const rowActions = this.config.rowActions || []
-    return rowActions.filter((action: any) => this.canUseAction(action.permissionAction || action.action))
+    return this.config.rowActions || []
   }
 
   get hasActions() {
@@ -910,6 +991,10 @@ export default class extends Vue {
 
   get permissionDialogTitle() {
     return `权限分配 - ${this.permissionTarget.username || ''}`
+  }
+
+  get configurableRoleOptions() {
+    return roleOptions.filter((role: any) => Number(role.value) !== 1)
   }
 
   get appointmentItemDialogTitle() {
@@ -1032,6 +1117,18 @@ export default class extends Vue {
     return canUseResourceAction(this.resourceKey, action, UserModule.roles, UserModule.permissions)
   }
 
+  private canUseResourceAction(resource: string, action: string) {
+    return canUseResourceAction(resource, action, UserModule.roles, UserModule.permissions)
+  }
+
+  private ensureActionAllowed(action: string, label: string, resource = this.resourceKey) {
+    if (this.canUseResourceAction(resource, action)) {
+      return true
+    }
+    this.$message.warning(`当前账号没有${label}权限，操作未提交`)
+    return false
+  }
+
   private async openCreate() {
     this.mode = 'create'
     this.orderIdempotencyToken = ''
@@ -1083,6 +1180,11 @@ export default class extends Vue {
   }
 
   private submitForm() {
+    const action = this.mode === 'create' ? 'create' : 'edit'
+    const label = this.mode === 'create' ? '新增' : '编辑'
+    if (!this.ensureActionAllowed(action, label)) {
+      return
+    }
     const formRef = this.$refs.formRef as any
     formRef.validate(async (valid: boolean) => {
       if (!valid) {
@@ -1105,6 +1207,8 @@ export default class extends Vue {
           this.$message.success(
             this.mode === 'create' && this.config.endpoint === 'users'
               ? '账号已创建，默认使用所选角色权限'
+              : this.mode === 'create' && this.config.endpoint === 'staff-members'
+                ? '员工与登录账号已创建，默认密码为 123456'
               : '保存成功'
           )
           this.dialogVisible = false
@@ -1140,6 +1244,9 @@ export default class extends Vue {
   }
 
   private async toggleStatus(row: any) {
+    if (!this.ensureActionAllowed('status', '状态修改')) {
+      return
+    }
     const nextStatus = Number(row.status) === 1 ? 0 : 1
     await this.$confirm(`确认${nextStatus === 1 ? '启用' : '停用'}该记录？`, '提示', { type: 'warning' })
     const response = await updateStatus(this.config.endpoint, row.id, nextStatus, this.config.statusMode || 'query')
@@ -1156,6 +1263,12 @@ export default class extends Vue {
     }
     if (action.action === 'items') {
       await this.openAppointmentItemDialog(row)
+      return
+    }
+    if (!this.ensureActionAllowed(
+      action.permissionAction || action.action,
+      action.label || '当前操作'
+    )) {
       return
     }
     if (action.action === 'toOrder') {
@@ -1216,6 +1329,11 @@ export default class extends Vue {
   }
 
   private async submitAppointmentItem() {
+    const itemAction = this.appointmentItemEditingId ? 'edit' : 'create'
+    const itemLabel = this.appointmentItemEditingId ? '预约项目编辑' : '预约项目新增'
+    if (!this.ensureActionAllowed(itemAction, itemLabel, 'appointmentItems')) {
+      return
+    }
     const projectId = this.appointmentItemForm.serviceProjectId
     const project = this.serviceProjectOptions.find((item: any) => String(item.id) === String(projectId))
     if (!project) {
@@ -1267,6 +1385,9 @@ export default class extends Vue {
   }
 
   private async removeAppointmentItem(row: any) {
+    if (!this.ensureActionAllowed('delete', '预约项目删除', 'appointmentItems')) {
+      return
+    }
     await this.$confirm(`确认删除项目“${row.serviceName || row.serviceProjectId}”？`, '提示', { type: 'warning' })
     const response = await deleteRecord('appointment-items', row.id)
     if (Number(response.data.code) === 200) {
@@ -1285,6 +1406,9 @@ export default class extends Vue {
   }
 
   private async convertAppointmentToOrder() {
+    if (!this.ensureActionAllowed('toOrder', '预约转订单')) {
+      return
+    }
     if (this.appointmentItems.length === 0) {
       this.$message.warning('请至少添加一个服务项目')
       return
@@ -1324,6 +1448,48 @@ export default class extends Vue {
     }
   }
 
+  private async openRolePermissionDialog() {
+    if (!this.ensureActionAllowed('rolePermissions', '角色默认权限配置')) {
+      return
+    }
+    this.rolePermissionDialogVisible = true
+    this.rolePermissionRoleId = 2
+    await this.loadRoleDefaultPermissions()
+  }
+
+  private async loadRoleDefaultPermissions() {
+    this.rolePermissionLoading = true
+    this.rolePermissionCodes = []
+    this.rolePermissionGroups = []
+    try {
+      const response = await getRolePermissions(Number(this.rolePermissionRoleId))
+      const payload = response.data.data || {}
+      this.rolePermissionCodes = [...(payload.permissionCodes || [])]
+      this.rolePermissionGroups = this.groupPermissions(payload.allPermissions || [])
+    } finally {
+      this.rolePermissionLoading = false
+    }
+  }
+
+  private async submitRoleDefaultPermissions() {
+    if (!this.ensureActionAllowed('rolePermissions', '角色默认权限配置')) {
+      return
+    }
+    this.rolePermissionSubmitting = true
+    try {
+      const response = await updateRolePermissions(
+        Number(this.rolePermissionRoleId),
+        this.rolePermissionCodes
+      )
+      if (Number(response.data.code) === 200) {
+        this.$message.success('角色默认权限已保存，新登录账号将按此权限生效')
+        this.rolePermissionDialogVisible = false
+      }
+    } finally {
+      this.rolePermissionSubmitting = false
+    }
+  }
+
   private restoreRoleDefaultPermissions() {
     this.permissionCodes = [...this.permissionRoleDefaultCodes]
     this.$nextTick(() => {
@@ -1359,6 +1525,9 @@ export default class extends Vue {
     if (!this.permissionTarget.id) {
       return
     }
+    if (!this.ensureActionAllowed('permissions', '账号权限配置')) {
+      return
+    }
     this.permissionSubmitting = true
     try {
       const response = await updateUserPermissions(
@@ -1376,6 +1545,9 @@ export default class extends Vue {
   }
 
   private async removeRow(row: any) {
+    if (!this.ensureActionAllowed('delete', '删除')) {
+      return
+    }
     await this.$confirm('确认删除该记录？', '提示', { type: 'warning' })
     const response = await deleteRecord(this.config.endpoint, row.id)
     if (Number(response.data.code) === 200) {
@@ -1581,6 +1753,12 @@ export default class extends Vue {
   span {
     color: #7b8496;
     font-size: 13px;
+  }
+}
+
+.role-permission-target {
+  .el-select {
+    width: 190px;
   }
 }
 

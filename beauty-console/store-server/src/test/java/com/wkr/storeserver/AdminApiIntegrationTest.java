@@ -148,6 +148,35 @@ class AdminApiIntegrationTest {
     }
 
     @Test
+    void administratorCanConfigureRoleDefaultsButCannotElevateStaffIntoAccountAdmin() throws Exception {
+        String token = loginAndGetToken("admin");
+
+        mockMvc.perform(get("/admin/permissions/roles/3")
+                        .header("token", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.roleCode").value("STAFF"))
+                .andExpect(jsonPath("$.data.permissionCodes").isArray());
+
+        mockMvc.perform(put("/admin/permissions/roles/3")
+                        .header("token", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"permissionCodes":["dashboard:view","customers:view"]}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        mockMvc.perform(put("/admin/users/3/permissions")
+                        .header("token", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"permissionCodes":["users:view"],"useRoleDefault":false}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("当前角色不能分配权限：users:view"));
+    }
+
+    @Test
     void staffOnlySeesCustomersAppointmentsAndOrdersRelatedToSelf() throws Exception {
         String token = loginAndGetToken("staff_scope");
 

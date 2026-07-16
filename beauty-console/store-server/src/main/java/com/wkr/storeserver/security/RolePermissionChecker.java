@@ -2,6 +2,7 @@ package com.wkr.storeserver.security;
 
 import com.wkr.storepojo.enums.RoleEnum;
 import com.wkr.storeserver.service.PermissionPointService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 
@@ -31,6 +32,19 @@ public class RolePermissionChecker {
             "/admin/service-orders",
             "/admin/service-order-items");
 
+    private static final List<String> READONLY_PATHS = List.of(
+            "/admin/dashboard",
+            "/admin/customers",
+            "/admin/service-projects",
+            "/admin/inventory-skus",
+            "/admin/service-project-inventories",
+            "/admin/inventory-stock-logs",
+            "/admin/appointments",
+            "/admin/appointment-items",
+            "/admin/service-orders",
+            "/admin/service-order-items",
+            "/admin/payment-records");
+
     private final PermissionPointService permissionPointService;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
@@ -38,6 +52,7 @@ public class RolePermissionChecker {
         this.permissionPointService = null;
     }
 
+    @Autowired
     public RolePermissionChecker(PermissionPointService permissionPointService) {
         this.permissionPointService = permissionPointService;
     }
@@ -56,6 +71,11 @@ public class RolePermissionChecker {
             return true;
         }
 
+        boolean allowedByRole = isAllowedByLegacyMatrix(role, normalizedMethod, path);
+        if (!allowedByRole) {
+            return false;
+        }
+
         if (permissionPointService != null) {
             try {
                 if (permissionPointService.isPermissionModelReady()) {
@@ -68,7 +88,7 @@ public class RolePermissionChecker {
             }
         }
 
-        return isAllowedByLegacyMatrix(role, normalizedMethod, path);
+        return allowedByRole;
     }
 
     private boolean isAllowedByLegacyMatrix(RoleEnum role, String method, String path) {
@@ -78,13 +98,15 @@ public class RolePermissionChecker {
 
         boolean readRequest = isReadRequest(method);
         if (role == RoleEnum.READONLY) {
-            return readRequest;
+            return readRequest && matchesAny(path, READONLY_PATHS);
         }
         if (role == RoleEnum.INVENTORY_ADMIN) {
-            return isInventoryAllowed(method, path);
+            return readRequest && matchesPath(path, "/admin/dashboard")
+                    || isInventoryAllowed(method, path);
         }
         if (role == RoleEnum.FINANCE) {
-            return isPaymentWrite(method, path)
+            return readRequest && matchesPath(path, "/admin/dashboard")
+                    || isPaymentWrite(method, path)
                     || readRequest && matchesAny(path, FINANCE_READ_PATHS);
         }
         if (role == RoleEnum.STAFF) {

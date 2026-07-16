@@ -102,7 +102,9 @@ INSERT INTO sys_permission (
     (1054, 'users:status', '账号状态', '账号权限', 'PATCH', '/admin/users/*/status', NULL, 'users:status', 1),
     (1055, 'users:delete', '账号删除', '账号权限', 'DELETE', '/admin/users/**', NULL, 'users:delete', 1),
     (1056, 'users:permissions', '账号权限分配', '账号权限', '*', '/admin/users/*/permissions', NULL, 'users:permissions', 1),
-    (1057, 'permissions:view', '权限点查看', '账号权限', 'GET', '/admin/permissions/**', NULL, 'permissions:view', 1)
+    (1057, 'permissions:view', '权限点查看', '账号权限', 'GET', '/admin/permissions/**', NULL, 'permissions:view', 1),
+    (1058, 'roles:permissions', '角色默认权限配置', '账号权限', '*', '/admin/permissions/roles/**', NULL, 'roles:permissions', 1),
+    (1059, 'users:resetPassword', '账号密码重置', '账号权限', 'PATCH', '/admin/users/*/reset-password', NULL, 'users:resetPassword', 1)
 ON DUPLICATE KEY UPDATE
     permission_name = VALUES(permission_name),
     permission_group = VALUES(permission_group),

@@ -6,6 +6,7 @@ import com.wkr.storecommon.common.Result;
 import com.wkr.storepojo.dto.SysUserLoginDTO;
 import com.wkr.storepojo.dto.SysUserPageQueryDTO;
 import com.wkr.storepojo.entity.SysUser;
+import com.wkr.storepojo.entity.StaffMember;
 import com.wkr.storepojo.vo.LoginUserVO;
 import com.wkr.storepojo.vo.SysUserVO;
 
@@ -16,6 +17,8 @@ import com.wkr.storepojo.vo.SysUserVO;
 */
 public interface SysUserService extends IService<SysUser> {
 
+    String DEFAULT_PASSWORD = "123456";
+
     LoginUserVO login(SysUserLoginDTO sysUserLoginDTO);
 
     PageResult<SysUserVO> page(SysUserPageQueryDTO sysUserPageQueryDTO);
@@ -25,4 +28,12 @@ public interface SysUserService extends IService<SysUser> {
     void validateStaffBinding(Long userId, Integer roleId, Long staffId);
 
     void updateStatus(Long id, Integer status);
+
+    Long createForStaff(StaffMember staffMember, String username, Integer roleId);
+
+    void ensureAccountsForAllStaff();
+
+    void syncStatusForStaff(Long staffId, Integer status);
+
+    void resetPassword(Long userId);
 }

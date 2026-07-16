@@ -6,7 +6,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 /**
  * Spring Boot 上下文测试，验证应用核心配置和 Bean 能够正常加载。
  */
-@SpringBootTest
+@SpringBootTest(properties = "store.database.compatibility-initializer-enabled=false")
 class StoreServerApplicationTests {
 
     @Test

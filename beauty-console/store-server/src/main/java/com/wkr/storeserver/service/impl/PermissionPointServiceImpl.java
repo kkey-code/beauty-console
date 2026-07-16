@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.wkr.storecommon.exception.BusinessException;
 import com.wkr.storepojo.dto.UserPermissionDTO;
+import com.wkr.storepojo.dto.RolePermissionDTO;
 import com.wkr.storepojo.entity.SysPermission;
 import com.wkr.storepojo.entity.SysRolePermission;
 import com.wkr.storepojo.entity.SysUser;
@@ -11,11 +12,13 @@ import com.wkr.storepojo.entity.SysUserPermission;
 import com.wkr.storepojo.enums.RoleEnum;
 import com.wkr.storepojo.vo.PermissionPointVO;
 import com.wkr.storepojo.vo.UserPermissionVO;
+import com.wkr.storepojo.vo.RolePermissionVO;
 import com.wkr.storeserver.mapper.SysPermissionMapper;
 import com.wkr.storeserver.mapper.SysRolePermissionMapper;
 import com.wkr.storeserver.mapper.SysUserMapper;
 import com.wkr.storeserver.mapper.SysUserPermissionMapper;
 import com.wkr.storeserver.security.PermissionRule;
+import com.wkr.storeserver.security.RolePermissionPolicy;
 import com.wkr.storeserver.service.PermissionPointService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.cache.annotation.CacheEvict;
@@ -111,7 +114,7 @@ public class PermissionPointServiceImpl extends ServiceImpl<SysPermissionMapper,
         vo.setCustomized(hasUserPermissionOverride(userId));
         vo.setPermissionCodes(listEffectiveCodes(userId, role));
         vo.setRolePermissionCodes(listRoleDefaultCodes(role));
-        vo.setAllPermissions(listPermissionPoints());
+        vo.setAllPermissions(listAssignablePermissionPoints(role));
         return vo;
     }
 
@@ -123,7 +126,8 @@ public class PermissionPointServiceImpl extends ServiceImpl<SysPermissionMapper,
             @CacheEvict(cacheNames = "dashboard:overview", allEntries = true)
     })
     public void updateUserPermissions(Long userId, UserPermissionDTO dto) {
-        requireUser(userId);
+        SysUser user = requireUser(userId);
+        RoleEnum role = RoleEnum.fromCode(user.getRoleId());
         if (dto == null || dto.getPermissionCodes() == null) {
             throw new BusinessException("权限点不能为空");
         }
@@ -139,6 +143,7 @@ public class PermissionPointServiceImpl extends ServiceImpl<SysPermissionMapper,
                 .filter(StringUtils::hasText)
                 .map(String::trim)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
+        assertAssignable(role, permissionCodes);
         if (permissionCodes.isEmpty()) {
             saveUserPermission(userId, EMPTY_OVERRIDE_PERMISSION_ID, LocalDateTime.now());
             return;
@@ -156,17 +161,74 @@ public class PermissionPointServiceImpl extends ServiceImpl<SysPermissionMapper,
         }
     }
 
+    @Override
+    public RolePermissionVO getRolePermissions(Integer roleId) {
+        RoleEnum role = requireRole(roleId);
+        RolePermissionVO vo = new RolePermissionVO();
+        vo.setRoleId(role.getCode());
+        vo.setRoleCode(role.getRoleCode());
+        vo.setRoleName(role.getDescription());
+        vo.setPermissionCodes(listRoleDefaultCodes(role));
+        vo.setAllPermissions(listAssignablePermissionPoints(role));
+        return vo;
+    }
+
+    @Override
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "permission:codes", allEntries = true),
+            @CacheEvict(cacheNames = "permission:rules", allEntries = true),
+            @CacheEvict(cacheNames = "dashboard:overview", allEntries = true)
+    })
+    public void updateRolePermissions(Integer roleId, RolePermissionDTO dto) {
+        RoleEnum role = requireRole(roleId);
+        if (role == RoleEnum.SUPER_ADMIN) {
+            throw new BusinessException("超级管理员始终拥有全部权限，无需配置");
+        }
+        if (dto == null || dto.getPermissionCodes() == null) {
+            throw new BusinessException("权限点不能为空");
+        }
+        Set<String> permissionCodes = dto.getPermissionCodes().stream()
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        assertAssignable(role, permissionCodes);
+
+        List<SysPermission> permissions = permissionCodes.isEmpty()
+                ? List.of()
+                : sysPermissionMapper.selectList(
+                        activePermissionWrapper().in(SysPermission::getPermissionCode, permissionCodes));
+        if (permissions.size() != permissionCodes.size()) {
+            throw new BusinessException("权限点不存在或已停用");
+        }
+
+        sysRolePermissionMapper.delete(new LambdaQueryWrapper<SysRolePermission>()
+                .eq(SysRolePermission::getRoleId, role.getCode()));
+        LocalDateTime now = LocalDateTime.now();
+        for (SysPermission permission : permissions) {
+            SysRolePermission relation = new SysRolePermission();
+            relation.setRoleId(role.getCode());
+            relation.setPermissionId(permission.getId());
+            relation.setCreateTime(now);
+            sysRolePermissionMapper.insert(relation);
+        }
+    }
+
     private List<SysPermission> listEffectivePermissions(Long userId, RoleEnum role) {
         if (role == null) {
             return List.of();
         }
+        List<SysPermission> permissions;
         if (role == RoleEnum.SUPER_ADMIN) {
-            return listAllActivePermissions();
+            permissions = listAllActivePermissions();
+        } else if (userId != null && hasUserPermissionOverride(userId)) {
+            permissions = listUserPermissions(userId);
+        } else {
+            permissions = listRolePermissions(role);
         }
-        if (userId != null && hasUserPermissionOverride(userId)) {
-            return listUserPermissions(userId);
-        }
-        return listRolePermissions(role);
+        return permissions.stream()
+                .filter(permission -> RolePermissionPolicy.isAllowed(role, permission.getPermissionCode()))
+                .collect(Collectors.toList());
     }
 
     private List<String> listRoleDefaultCodes(RoleEnum role) {
@@ -177,10 +239,36 @@ public class PermissionPointServiceImpl extends ServiceImpl<SysPermissionMapper,
                 ? listAllActivePermissions()
                 : listRolePermissions(role);
         return permissions.stream()
+                .filter(permission -> RolePermissionPolicy.isAllowed(role, permission.getPermissionCode()))
                 .map(SysPermission::getPermissionCode)
                 .filter(StringUtils::hasText)
                 .distinct()
                 .collect(Collectors.toList());
+    }
+
+    private List<PermissionPointVO> listAssignablePermissionPoints(RoleEnum role) {
+        return listAllActivePermissions().stream()
+                .filter(permission -> RolePermissionPolicy.isAllowed(role, permission.getPermissionCode()))
+                .map(this::toPermissionPointVO)
+                .collect(Collectors.toList());
+    }
+
+    private void assertAssignable(RoleEnum role, Set<String> permissionCodes) {
+        String forbidden = permissionCodes.stream()
+                .filter(code -> !RolePermissionPolicy.isAllowed(role, code))
+                .findFirst()
+                .orElse(null);
+        if (forbidden != null) {
+            throw new BusinessException("当前角色不能分配权限：" + forbidden);
+        }
+    }
+
+    private RoleEnum requireRole(Integer roleId) {
+        RoleEnum role = RoleEnum.fromCode(roleId);
+        if (role == null) {
+            throw new BusinessException("角色不存在");
+        }
+        return role;
     }
 
     private boolean hasUserPermissionOverride(Long userId) {

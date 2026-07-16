@@ -12,6 +12,7 @@ import com.wkr.storecommon.util.JwtUtils;
 import com.wkr.storepojo.dto.SysUserLoginDTO;
 import com.wkr.storepojo.dto.SysUserPageQueryDTO;
 import com.wkr.storepojo.entity.SysUser;
+import com.wkr.storepojo.entity.StaffMember;
 import com.wkr.storepojo.enums.RoleEnum;
 import com.wkr.storepojo.vo.LoginUserVO;
 import com.wkr.storepojo.vo.SysUserVO;
@@ -21,11 +22,15 @@ import com.wkr.storeserver.service.StaffMemberService;
 import com.wkr.storeserver.service.SysUserService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 系统用户服务实现，封装该业务模块的查询、校验、状态更新和持久化流程。
@@ -160,6 +165,121 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         if (updated != 1) {
             throw new BusinessException("用户不存在或状态未更新");
         }
+    }
+
+    @Override
+    @Transactional
+    public Long createForStaff(StaffMember staffMember, String username, Integer roleId) {
+        if (staffMember == null || staffMember.getId() == null) {
+            throw new BusinessException("员工信息不存在，无法创建账号");
+        }
+        Integer normalizedRoleId = roleId == null ? RoleEnum.STAFF.getCode() : roleId;
+        validateStaffBinding(null, normalizedRoleId, staffMember.getId());
+
+        String normalizedUsername = StringUtils.hasText(username)
+                ? username.trim()
+                : defaultUsername(staffMember.getId());
+        if (sysUserMapper.selectCount(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getUsername, normalizedUsername)) > 0) {
+            throw new BusinessException("登录账号已存在，请更换账号");
+        }
+
+        SysUser user = new SysUser();
+        user.setUsername(normalizedUsername);
+        user.setPasswordHash(passwordEncoder.encode(SysUserService.DEFAULT_PASSWORD));
+        user.setRoleId(normalizedRoleId);
+        user.setStaffId(staffMember.getId());
+        user.setStatus(staffMember.getStatus() == null ? 1 : staffMember.getStatus());
+        user.setCreateTime(LocalDateTime.now());
+        user.setUpdateTime(LocalDateTime.now());
+        if (sysUserMapper.insert(user) != 1) {
+            throw new BusinessException("员工账号创建失败");
+        }
+        return user.getId();
+    }
+
+    @Override
+    @Transactional
+    public void ensureAccountsForAllStaff() {
+        List<StaffMember> staffMembers = staffMemberService.list();
+        if (staffMembers == null || staffMembers.isEmpty()) {
+            return;
+        }
+
+        Set<Long> boundStaffIds = new HashSet<>();
+        Set<String> usernames = new HashSet<>();
+        for (SysUser user : sysUserMapper.selectList(null)) {
+            if (user.getStaffId() != null) {
+                boundStaffIds.add(user.getStaffId());
+            }
+            if (StringUtils.hasText(user.getUsername())) {
+                usernames.add(user.getUsername());
+            }
+        }
+
+        String encodedDefaultPassword = passwordEncoder.encode(SysUserService.DEFAULT_PASSWORD);
+        LocalDateTime now = LocalDateTime.now();
+        for (StaffMember staffMember : staffMembers) {
+            if (staffMember.getId() == null || boundStaffIds.contains(staffMember.getId())) {
+                continue;
+            }
+            String username = uniqueDefaultUsername(staffMember.getId(), usernames);
+            SysUser user = new SysUser();
+            user.setUsername(username);
+            user.setPasswordHash(encodedDefaultPassword);
+            user.setRoleId(RoleEnum.STAFF.getCode());
+            user.setStaffId(staffMember.getId());
+            user.setStatus(staffMember.getStatus() == null ? 1 : staffMember.getStatus());
+            user.setCreateTime(now);
+            user.setUpdateTime(now);
+            if (sysUserMapper.insert(user) != 1) {
+                throw new BusinessException("为员工 " + staffMember.getName() + " 自动创建账号失败");
+            }
+            boundStaffIds.add(staffMember.getId());
+            usernames.add(username);
+        }
+    }
+
+    @Override
+    public void syncStatusForStaff(Long staffId, Integer status) {
+        if (staffId == null || status == null) {
+            return;
+        }
+        SysUser update = new SysUser();
+        update.setStatus(status);
+        update.setUpdateTime(LocalDateTime.now());
+        sysUserMapper.update(update, new LambdaQueryWrapper<SysUser>().eq(SysUser::getStaffId, staffId));
+    }
+
+    @Override
+    public void resetPassword(Long userId) {
+        SysUser user = getById(userId);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+        SysUser update = new SysUser();
+        update.setId(userId);
+        update.setPasswordHash(passwordEncoder.encode(SysUserService.DEFAULT_PASSWORD));
+        update.setUpdateTime(LocalDateTime.now());
+        if (sysUserMapper.updateById(update) != 1) {
+            throw new BusinessException("密码重置失败");
+        }
+    }
+
+    private String defaultUsername(Long staffId) {
+        return "emp" + staffId;
+    }
+
+    private String uniqueDefaultUsername(Long staffId, Set<String> usernames) {
+        String base = defaultUsername(staffId);
+        if (!usernames.contains(base)) {
+            return base;
+        }
+        int suffix = 1;
+        while (usernames.contains(base + "_" + suffix)) {
+            suffix++;
+        }
+        return base + "_" + suffix;
     }
 
     private boolean matchesAndUpgradePassword(String rawPassword, LoginUserVO loginUserVO) {

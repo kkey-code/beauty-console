@@ -162,6 +162,27 @@ class SysUserServiceImplLoginTest {
         assertThrows(BusinessException.class, () -> service.validateStaffBinding(null, 3, 1007L));
     }
 
+    @Test
+    void creatingEmployeeAccountUsesGeneratedUsernameAndDefaultPassword() {
+        StaffMember staffMember = new StaffMember();
+        staffMember.setId(1007L);
+        staffMember.setStatus(1);
+        when(staffMemberService.getById(1007L)).thenReturn(staffMember);
+        when(sysUserMapper.selectCount(any())).thenReturn(0L);
+        when(passwordEncoder.encode(SysUserService.DEFAULT_PASSWORD)).thenReturn("encoded-default");
+        when(sysUserMapper.insert(any(SysUser.class))).thenReturn(1);
+
+        service.createForStaff(staffMember, null, null);
+
+        ArgumentCaptor<SysUser> userCaptor = ArgumentCaptor.forClass(SysUser.class);
+        verify(sysUserMapper).insert(userCaptor.capture());
+        SysUser saved = userCaptor.getValue();
+        assertEquals("emp1007", saved.getUsername());
+        assertEquals("encoded-default", saved.getPasswordHash());
+        assertEquals(RoleEnum.STAFF.getCode(), saved.getRoleId());
+        assertEquals(1007L, saved.getStaffId());
+    }
+
     private LoginUserVO loginUser(RoleEnum role) {
         LoginUserVO user = new LoginUserVO();
         user.setId(1001L);

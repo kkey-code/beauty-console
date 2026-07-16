@@ -9,13 +9,25 @@ import { canVisitRoute } from '@/utils/rolePermissions'
 
 NProgress.configure({ 'showSpinner': false })
 
+const firstAccessiblePath = () => {
+  const layoutRoute: any = (((router as any).options || {}).routes || [])
+    .find((route: any) => route.path === '/')
+  const route = ((layoutRoute && layoutRoute.children) || [])
+    .find((item: any) => canVisitRoute(item, UserModule.roles, UserModule.permissions))
+  if (!route || !route.path) {
+    return '/404'
+  }
+  return route.path.startsWith('/') ? route.path : `/${route.path}`
+}
+
 router.beforeEach(async (to: Route, _: Route, next: any) => {
   NProgress.start()
   if (Cookies.get('token')) {
     await UserModule.GetUserInfo()
     if (!canVisitRoute(to, UserModule.roles, UserModule.permissions)) {
       Message.warning('当前账号无权限访问该页面')
-      next('/dashboard')
+      const target = firstAccessiblePath()
+      next(target === to.path ? '/404' : target)
       return
     }
     next()

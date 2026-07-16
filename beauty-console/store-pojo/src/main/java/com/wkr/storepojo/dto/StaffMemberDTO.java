@@ -44,4 +44,11 @@ public class StaffMemberDTO implements Serializable {
     @Size(max = 500, message = "备注不能超过500个字符")
     @ApiModelProperty("备注")
     private String remark;
+
+    @Size(max = 50, message = "登录账号不能超过50个字符")
+    @ApiModelProperty("新增员工时的登录账号；不填则自动使用 emp+员工ID")
+    private String accountUsername;
+
+    @ApiModelProperty("新增员工时的账号角色；不填默认普通员工")
+    private Integer accountRoleId;
 }
