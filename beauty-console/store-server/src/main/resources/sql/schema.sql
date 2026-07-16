@@ -24,7 +24,7 @@ CREATE TABLE `sys_user` (
     `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_username` (`username`),
-    KEY `idx_staff_id` (`staff_id`)
+    UNIQUE KEY `uk_sys_user_staff` (`staff_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户账号表';
 
 -- =============================================
@@ -56,6 +56,7 @@ CREATE TABLE `customer_profile` (
     `birthday` date DEFAULT NULL COMMENT '生日',
     `level` varchar(20) NOT NULL DEFAULT '普通' COMMENT '客户等级：普通/银卡/金卡/VIP',
     `source` varchar(50) DEFAULT NULL COMMENT '客户来源',
+    `owner_staff_id` bigint DEFAULT NULL COMMENT '建档员工ID，用于员工数据范围',
     `remark` varchar(500) DEFAULT NULL COMMENT '备注',
     `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -63,6 +64,7 @@ CREATE TABLE `customer_profile` (
     PRIMARY KEY (`id`),
     KEY `idx_phone` (`phone`),
     KEY `idx_level` (`level`),
+    KEY `idx_customer_owner_staff` (`owner_staff_id`),
     KEY `idx_deleted` (`deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='客户档案表';
 

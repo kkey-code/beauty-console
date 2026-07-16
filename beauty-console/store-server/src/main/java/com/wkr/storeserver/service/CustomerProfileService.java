@@ -1,5 +1,8 @@
 package com.wkr.storeserver.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.wkr.storepojo.entity.CustomerProfile;
 
@@ -10,4 +13,11 @@ import com.wkr.storepojo.entity.CustomerProfile;
 */
 public interface CustomerProfileService extends IService<CustomerProfile> {
 
+    IPage<CustomerProfile> pageVisible(Page<CustomerProfile> page, LambdaQueryWrapper<CustomerProfile> wrapper);
+
+    CustomerProfile getVisibleById(Long id);
+
+    long countVisibleCustomers();
+
+    void assertCanAccess(Long id);
 }

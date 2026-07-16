@@ -50,6 +50,9 @@ public class CustomerProfile implements Serializable {
     @ApiModelProperty("客户来源")
     private String source;
 
+    @ApiModelProperty("建档员工ID；用于普通员工的数据范围")
+    private Long ownerStaffId;
+
     @ApiModelProperty("备注")
     private String remark;
 

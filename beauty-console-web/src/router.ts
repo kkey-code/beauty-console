@@ -90,7 +90,7 @@ const router = new Router({
           path: 'users',
           component: Resource,
           name: 'Users',
-          meta: { title: '账号权限', icon: 'icon-employee', resource: 'users', roles: ['SUPER_ADMIN', 'STORE_MANAGER'], permission: 'users:view' }
+          meta: { title: '员工账号与权限', icon: 'icon-employee', resource: 'users', roles: ['SUPER_ADMIN', 'STORE_MANAGER'], permission: 'users:view' }
         }
       ]
     },

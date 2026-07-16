@@ -23,9 +23,11 @@ import com.wkr.storeserver.mapper.AppointmentMapper;
 import com.wkr.storeserver.mapper.CustomerProfileMapper;
 import com.wkr.storeserver.service.AppointmentItemService;
 import com.wkr.storeserver.service.AppointmentService;
+import com.wkr.storeserver.service.CustomerProfileService;
 import com.wkr.storeserver.service.DeletionGuardService;
 import com.wkr.storeserver.service.StaffMemberService;
 import com.wkr.storeserver.support.BusinessNoGenerator;
+import com.wkr.storeserver.support.DataScopeSupport;
 import com.wkr.storeserver.transition.AppointmentStatusTransition;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +50,8 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
     @Autowired
     private CustomerProfileMapper customerProfileMapper;
     @Autowired
+    private CustomerProfileService customerProfileService;
+    @Autowired
     private StaffMemberService staffMemberService;
     @Autowired
     private AppointmentItemService appointmentItemService;
@@ -57,7 +61,7 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
     @Override
     public Result<PageResult<AppointmentVO>> List(AppointmentPageQueryDTO dto) {
         Page<AppointmentVO> page = new Page<>(dto.getPage(), dto.getPageSize());
-        IPage<AppointmentVO> records = appointmentMapper.list(page, dto);
+        IPage<AppointmentVO> records = appointmentMapper.list(page, dto, DataScopeSupport.currentScopedStaffId());
 
         List<AppointmentVO> appointmentVOS = new ArrayList<>();
         for (AppointmentVO appointmentVO : records.getRecords()) {
@@ -74,7 +78,10 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
     public List<AppointmentVO> listRecent(int limit) {
         int normalizedLimit = Math.max(1, Math.min(limit, 50));
         Page<AppointmentVO> page = new Page<>(1, normalizedLimit, false);
-        IPage<AppointmentVO> records = appointmentMapper.list(page, new AppointmentPageQueryDTO());
+        IPage<AppointmentVO> records = appointmentMapper.list(
+                page,
+                new AppointmentPageQueryDTO(),
+                DataScopeSupport.currentScopedStaffId());
         for (AppointmentVO appointmentVO : records.getRecords()) {
             appointmentVO.setStatusName(AppointmentStatusEnum.labelOf(appointmentVO.getStatus()));
         }
@@ -82,11 +89,24 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
     }
 
     @Override
-    public AppointmentVO getByID(Long id) {
-        Appointment appointment = appointmentMapper.selectById(id);
-        if (appointment == null) {
-            throw new BusinessException("预约不存在");
+    public long countVisibleAppointments() {
+        Long staffId = DataScopeSupport.currentScopedStaffId();
+        return staffId == null
+                ? count()
+                : appointmentMapper.countVisibleAppointmentsByStaff(staffId);
+    }
+
+    @Override
+    public void assertCanAccess(Long id) {
+        if (!DataScopeSupport.isStaffSelfScope()) {
+            return;
         }
+        assertCanAccess(getExistingAppointmentUnscoped(id));
+    }
+
+    @Override
+    public AppointmentVO getByID(Long id) {
+        Appointment appointment = getExistingAppointment(id);
 
         CustomerProfile customerProfile = customerProfileMapper.selectById(appointment.getCustomerId());
         StaffMember staffMember = staffMemberService.getById(appointment.getStaffId());
@@ -121,6 +141,7 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
     @Override
     @Transactional
     public boolean createAppointment(AppointmentDTO dto) {
+        customerProfileService.assertCanAccess(dto.getCustomerId());
         Appointment appointment = new Appointment();
         BeanUtils.copyProperties(dto, appointment);
         fillAddDefaults(appointment);
@@ -135,6 +156,10 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
                 AppointmentItem appointmentItem = new AppointmentItem();
                 BeanUtils.copyProperties(item, appointmentItem);
                 appointmentItem.setAppointmentId(appointment.getId());
+                Long scopedStaffId = DataScopeSupport.currentScopedStaffId();
+                if (scopedStaffId != null) {
+                    appointmentItem.setStaffId(scopedStaffId);
+                }
                 appointmentItem.setCreateTime(LocalDateTime.now());
                 appointmentItemService.save(appointmentItem);
             }
@@ -144,10 +169,19 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
 
     @Override
     public boolean updateAppointment(Long id, AppointmentDTO dto) {
-        getExistingAppointment(id);
+        Appointment existing = getExistingAppointment(id);
+        customerProfileService.assertCanAccess(dto.getCustomerId());
         Appointment appointment = new Appointment();
         BeanUtils.copyProperties(dto, appointment);
         appointment.setId(id);
+        Long scopedStaffId = DataScopeSupport.currentScopedStaffId();
+        if (scopedStaffId != null && dto.getStaffId() != null
+                && !dto.getStaffId().equals(existing.getStaffId())) {
+            throw new BusinessException("普通员工不能变更预约的主服务员工");
+        }
+        if (scopedStaffId != null) {
+            appointment.setStaffId(existing.getStaffId());
+        }
         appointment.setUpdateTime(LocalDateTime.now());
         return updateById(appointment);
     }
@@ -190,6 +224,12 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
     }
 
     private Appointment getExistingAppointment(Long id) {
+        Appointment appointment = getExistingAppointmentUnscoped(id);
+        assertCanAccess(appointment);
+        return appointment;
+    }
+
+    private Appointment getExistingAppointmentUnscoped(Long id) {
         Appointment appointment = getById(id);
         if (appointment == null) {
             throw new BusinessException("预约不存在");
@@ -204,6 +244,7 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
         if (appointment == null) {
             throw new BusinessException("预约不存在");
         }
+        assertCanAccess(appointment);
         return appointment;
     }
 
@@ -212,7 +253,14 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
         if (!StringUtils.hasText(appointment.getAppointmentNo())) {
             appointment.setAppointmentNo(BusinessNoGenerator.next("APT"));
         }
-        if (appointment.getStaffId() == null) {
+        Long scopedStaffId = DataScopeSupport.currentScopedStaffId();
+        if (scopedStaffId != null && appointment.getStaffId() != null
+                && !scopedStaffId.equals(appointment.getStaffId())) {
+            throw new BusinessException("普通员工只能为自己创建预约");
+        }
+        if (scopedStaffId != null) {
+            appointment.setStaffId(scopedStaffId);
+        } else if (appointment.getStaffId() == null) {
             appointment.setStaffId(BaseContext.getCurrentId());
         }
         if (appointment.getStaffId() == null) {
@@ -220,6 +268,19 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
         }
         appointment.setCreateTime(now);
         appointment.setUpdateTime(now);
+    }
+
+    private void assertCanAccess(Appointment appointment) {
+        Long scopedStaffId = DataScopeSupport.currentScopedStaffId();
+        if (scopedStaffId == null || scopedStaffId.equals(appointment.getStaffId())) {
+            return;
+        }
+        long assignedItems = appointmentItemService.count(new LambdaQueryWrapper<AppointmentItem>()
+                .eq(AppointmentItem::getAppointmentId, appointment.getId())
+                .eq(AppointmentItem::getStaffId, scopedStaffId));
+        if (assignedItems == 0) {
+            throw new BusinessException("无权访问其他员工的预约");
+        }
     }
 
     private AppointmentStatusEnum statusOf(Integer status) {

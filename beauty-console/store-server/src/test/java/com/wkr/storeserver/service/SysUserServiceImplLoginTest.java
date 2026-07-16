@@ -6,6 +6,7 @@ import com.wkr.storecommon.properties.JwtProperties;
 import com.wkr.storecommon.util.JwtUtils;
 import com.wkr.storepojo.dto.SysUserLoginDTO;
 import com.wkr.storepojo.entity.SysUser;
+import com.wkr.storepojo.entity.StaffMember;
 import com.wkr.storepojo.enums.RoleEnum;
 import com.wkr.storepojo.vo.LoginUserVO;
 import com.wkr.storeserver.mapper.SysUserMapper;
@@ -46,6 +47,8 @@ class SysUserServiceImplLoginTest {
 
     @Mock
     private PermissionPointService permissionPointService;
+    @Mock
+    private StaffMemberService staffMemberService;
 
     private SysUserServiceImpl service;
 
@@ -55,7 +58,12 @@ class SysUserServiceImplLoginTest {
         properties.setAdminSecretKey(SECRET);
         properties.setAdminTtl(7_200_000L);
         properties.setAdminTokenName("token");
-        service = new SysUserServiceImpl(sysUserMapper, properties, passwordEncoder, permissionPointService);
+        service = new SysUserServiceImpl(
+                sysUserMapper,
+                properties,
+                passwordEncoder,
+                permissionPointService,
+                staffMemberService);
     }
 
     @Test
@@ -137,6 +145,21 @@ class SysUserServiceImplLoginTest {
         assertEquals(1001L, update.getId());
         assertEquals(0, update.getStatus());
         assertNotNull(update.getUpdateTime());
+    }
+
+    @Test
+    void accountMustBindAnEmployee() {
+        assertThrows(BusinessException.class, () -> service.validateStaffBinding(null, 3, null));
+    }
+
+    @Test
+    void oneEmployeeCannotBindTwoAccounts() {
+        StaffMember staffMember = new StaffMember();
+        staffMember.setId(1007L);
+        when(staffMemberService.getById(1007L)).thenReturn(staffMember);
+        when(sysUserMapper.selectCount(any())).thenReturn(1L);
+
+        assertThrows(BusinessException.class, () -> service.validateStaffBinding(null, 3, 1007L));
     }
 
     private LoginUserVO loginUser(RoleEnum role) {

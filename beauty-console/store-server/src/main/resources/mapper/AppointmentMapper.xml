@@ -23,6 +23,7 @@
         LEFT JOIN customer_profile c ON a.customer_id = c.id
         LEFT JOIN staff_member s ON a.staff_id = s.id
         <where>
+            AND a.deleted = 0
             <if test="dto.customerName != null and dto.customerName != ''">
                 AND c.name LIKE CONCAT('%', #{dto.customerName}, '%')
             </if>
@@ -35,7 +36,31 @@
             <if test="dto.beginTime != null and dto.endTime != null">
                 AND a.appointment_time BETWEEN #{dto.beginTime} AND #{dto.endTime}
             </if>
+            <if test="scopedStaffId != null">
+                AND (
+                    a.staff_id = #{scopedStaffId}
+                    OR EXISTS (
+                        SELECT 1 FROM appointment_item ai_scope
+                        WHERE ai_scope.appointment_id = a.id
+                          AND ai_scope.staff_id = #{scopedStaffId}
+                    )
+                )
+            </if>
         </where>
         ORDER BY a.appointment_time DESC, a.id DESC
+    </select>
+
+    <select id="countVisibleAppointmentsByStaff" resultType="long">
+        SELECT COUNT(*)
+        FROM appointment a
+        WHERE a.deleted = 0
+          AND (
+            a.staff_id = #{staffId}
+            OR EXISTS (
+               SELECT 1 FROM appointment_item ai_scope
+               WHERE ai_scope.appointment_id = a.id
+                 AND ai_scope.staff_id = #{staffId}
+            )
+          )
     </select>
 </mapper>

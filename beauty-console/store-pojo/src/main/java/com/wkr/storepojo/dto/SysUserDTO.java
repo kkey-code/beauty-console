@@ -38,7 +38,8 @@ public class SysUserDTO implements Serializable {
     @ApiModelProperty("角色ID：1超级管理员，2店长，3普通员工，4库存管理员，5财务/收银，6只读")
     private Integer roleId;
 
-    @ApiModelProperty("关联员工ID")
+    @NotNull(message = "关联员工不能为空")
+    @ApiModelProperty("关联员工ID；一个员工只能关联一个账号")
     private Long staffId;
 
     @NotNull(message = "状态不能为空")

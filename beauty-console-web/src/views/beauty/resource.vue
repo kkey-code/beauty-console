@@ -30,10 +30,11 @@
             :placeholder="field.placeholder || '请选择'"
           >
             <el-option
-              v-for="option in field.options"
+              v-for="option in fieldOptions(field)"
               :key="option.value"
               :label="option.label"
               :value="option.value"
+              :disabled="option.disabled"
             />
           </el-select>
           <el-date-picker
@@ -174,10 +175,11 @@
             :placeholder="field.placeholder || '请选择'"
           >
             <el-option
-              v-for="option in field.options"
+              v-for="option in fieldOptions(field)"
               :key="option.value"
               :label="option.label"
               :value="option.value"
+              :disabled="option.disabled"
             />
           </el-select>
           <el-date-picker
@@ -323,8 +325,13 @@
     >
       <div v-loading="permissionLoading" class="permission-body">
         <div class="permission-target">
-          <strong>{{ permissionTarget.username || '-' }}</strong>
-          <span>{{ permissionTarget.roleName || permissionTarget.roleCode || '-' }}</span>
+          <div>
+            <strong>{{ permissionTarget.username || '-' }}</strong>
+            <span>{{ permissionTarget.roleName || permissionTarget.roleCode || '-' }}</span>
+          </div>
+          <el-tag :type="permissionRestoreDefault ? 'success' : 'warning'" effect="light">
+            {{ permissionRestoreDefault ? '使用角色默认权限' : '使用账号自定义权限' }}
+          </el-tag>
         </div>
         <el-checkbox-group
           v-model="permissionCodes"
@@ -352,7 +359,7 @@
       </div>
       <div slot="footer" class="dialog-footer">
         <el-button @click="restoreRoleDefaultPermissions">
-          恢复角色默认
+          使用角色默认权限
         </el-button>
         <el-button @click="clearPermissionCodes">
           清空权限
@@ -496,7 +503,7 @@ const resourceConfigs: any = {
       { prop: 'level', label: '客户等级', type: 'select', options: levelOptions }
     ],
     columns: [
-      { prop: 'id', label: 'ID', width: 80 },
+      { prop: 'id', label: '客户编号', prefix: 'CUS', width: 130 },
       { prop: 'name', label: '客户姓名' },
       { prop: 'phone', label: '手机号' },
       { prop: 'gender', label: '性别', type: 'tag', map: optionMap(genderOptions), tagMap: { 1: 'success', 2: 'danger' } },
@@ -530,7 +537,7 @@ const resourceConfigs: any = {
       { prop: 'status', label: '状态', type: 'select', options: enabledOptions }
     ],
     columns: [
-      { prop: 'id', label: 'ID', width: 80 },
+      { prop: 'id', label: '员工编号', prefix: 'EMP', width: 130 },
       { prop: 'name', label: '员工姓名' },
       { prop: 'phone', label: '手机号' },
       { prop: 'gender', label: '性别', type: 'tag', map: optionMap(genderOptions), tagMap: { 1: 'success', 2: 'danger' } },
@@ -562,7 +569,7 @@ const resourceConfigs: any = {
       { prop: 'status', label: '状态', type: 'select', options: enabledOptions }
     ],
     columns: [
-      { prop: 'id', label: 'ID', width: 80 },
+      { prop: 'id', label: '项目编号', prefix: 'PRJ', width: 130 },
       { prop: 'name', label: '项目名称' },
       { prop: 'category', label: '分类' },
       { prop: 'price', label: '价格', type: 'money', width: 100 },
@@ -594,7 +601,7 @@ const resourceConfigs: any = {
       { prop: 'status', label: '状态', type: 'select', options: enabledOptions }
     ],
     columns: [
-      { prop: 'id', label: 'ID', width: 80 },
+      { prop: 'id', label: '耗材编号', prefix: 'SKU', width: 130 },
       { prop: 'name', label: '耗材名称' },
       { prop: 'category', label: '分类' },
       { prop: 'quantity', label: '当前库存' },
@@ -624,12 +631,12 @@ const resourceConfigs: any = {
     editable: true,
     deletable: true,
     searchFields: [
-      { prop: 'serviceProjectId', label: '项目ID' },
-      { prop: 'inventoryId', label: '耗材ID' },
+      { prop: 'serviceProjectId', label: '项目编号', prefix: 'PRJ' },
+      { prop: 'inventoryId', label: '耗材编号', prefix: 'SKU' },
       { prop: 'status', label: '状态', type: 'select', options: enabledOptions }
     ],
     columns: [
-      { prop: 'id', label: 'ID', width: 80 },
+      { prop: 'id', label: '配置编号', prefix: 'CFG', width: 130 },
       { prop: 'serviceProjectName', label: '服务项目' },
       { prop: 'inventoryName', label: '耗材' },
       { prop: 'consumeQuantity', label: '单次消耗' },
@@ -664,7 +671,7 @@ const resourceConfigs: any = {
       { prop: 'status', label: '状态', type: 'select', options: appointmentStatusOptions }
     ],
     columns: [
-      { prop: 'id', label: 'ID', width: 80 },
+      { prop: 'id', label: '预约ID', prefix: 'APPT', width: 140 },
       { prop: 'appointmentNo', label: '预约号' },
       { prop: 'customerName', label: '客户' },
       { prop: 'staffName', label: '主服务员工' },
@@ -699,7 +706,7 @@ const resourceConfigs: any = {
       { prop: 'payStatus', label: '支付状态', type: 'select', options: payStatusOptions }
     ],
     columns: [
-      { prop: 'id', label: 'ID', width: 80 },
+      { prop: 'id', label: '订单ID', prefix: 'ORD', width: 140 },
       { prop: 'orderNo', label: '订单号', width: 150 },
       { prop: 'customerName', label: '客户' },
       { prop: 'orderType', label: '类型', type: 'tag', map: optionMap(orderTypeOptions) },
@@ -724,13 +731,13 @@ const resourceConfigs: any = {
       { label: '作废', action: 'void', message: '作废后会同步回滚订单收款金额，确认继续？' }
     ],
     searchFields: [
-      { prop: 'orderId', label: '订单ID' },
+      { prop: 'orderId', label: '订单ID', prefix: 'ORD' },
       { prop: 'paymentMethod', label: '支付方式', type: 'select', options: paymentMethodOptions },
       { prop: 'payStatus', label: '状态', type: 'select', options: paymentRecordStatusOptions }
     ],
     columns: [
-      { prop: 'id', label: 'ID', width: 80 },
-      { prop: 'orderId', label: '订单ID' },
+      { prop: 'id', label: '收款ID', prefix: 'PAYR', width: 140 },
+      { prop: 'orderId', label: '订单ID', prefix: 'ORD' },
       { prop: 'paymentNo', label: '流水号', width: 150 },
       { prop: 'paymentMethod', label: '支付方式', type: 'tag', map: optionMap(paymentMethodOptions) },
       { prop: 'payAmount', label: '金额', type: 'money', width: 100 },
@@ -757,18 +764,18 @@ const resourceConfigs: any = {
     editable: false,
     deletable: false,
     searchFields: [
-      { prop: 'inventoryId', label: '耗材ID' },
+      { prop: 'inventoryId', label: '耗材编号', prefix: 'SKU' },
       { prop: 'changeType', label: '类型', type: 'select', options: changeTypeOptions },
-      { prop: 'relatedOrderId', label: '订单ID' }
+      { prop: 'relatedOrderId', label: '订单ID', prefix: 'ORD' }
     ],
     columns: [
-      { prop: 'id', label: 'ID', width: 80 },
+      { prop: 'id', label: '流水ID', prefix: 'STK', width: 140 },
       { prop: 'inventoryName', label: '耗材' },
       { prop: 'changeType', label: '类型', type: 'tag', map: optionMap(changeTypeOptions), tagMap: { stock_in: 'success', stock_out: 'warning', check: 'info', loss: 'danger', return: 'success' } },
       { prop: 'changeQuantity', label: '变动数量' },
       { prop: 'beforeQuantity', label: '变动前' },
       { prop: 'afterQuantity', label: '变动后' },
-      { prop: 'relatedOrderId', label: '订单ID' },
+      { prop: 'relatedOrderId', label: '订单ID', prefix: 'ORD' },
       { prop: 'createTime', label: '时间', type: 'date', width: 160 }
     ],
     formFields: [
@@ -781,7 +788,7 @@ const resourceConfigs: any = {
     ]
   },
   users: {
-    title: '账号权限',
+    title: '员工账号与权限',
     shortTitle: '账号',
     group: '人员与权限',
     endpoint: 'users',
@@ -791,7 +798,7 @@ const resourceConfigs: any = {
     statusAction: true,
     statusMode: 'body',
     rowActions: [
-      { label: '权限', action: 'permissions' }
+      { label: '配置权限', action: 'permissions' }
     ],
     searchFields: [
       { prop: 'username', label: '账号' },
@@ -799,7 +806,7 @@ const resourceConfigs: any = {
       { prop: 'status', label: '状态', type: 'select', options: enabledOptions }
     ],
     columns: [
-      { prop: 'id', label: 'ID', width: 80 },
+      { prop: 'id', label: '账号ID', prefix: 'ACC', width: 150 },
       { prop: 'username', label: '账号' },
       { prop: 'roleName', label: '角色' },
       { prop: 'staffName', label: '关联员工' },
@@ -810,7 +817,14 @@ const resourceConfigs: any = {
       { prop: 'username', label: '账号', required: true },
       { prop: 'passwordHash', label: '密码', required: true },
       { prop: 'roleId', label: '角色', type: 'select', options: roleOptions, default: 3, required: true },
-      { prop: 'staffId', label: '员工ID', type: 'number' },
+      {
+        prop: 'staffId',
+        label: '关联员工',
+        type: 'select',
+        optionSource: 'staffMembers',
+        placeholder: '请选择尚未绑定账号的员工',
+        required: true
+      },
       { prop: 'status', label: '状态', type: 'select', options: enabledOptions, default: 1, required: true }
     ]
   }
@@ -847,6 +861,7 @@ export default class extends Vue {
   private appointmentItemForm: any = {}
   private appointmentItemEditingId: number | string = ''
   private serviceProjectOptions: any[] = []
+  private staffMemberOptions: any[] = []
   private listRequestSource: any = null
   private listRequestSequence = 0
 
@@ -975,12 +990,21 @@ export default class extends Vue {
   private cleanParams(source: any) {
     const params: any = {}
     Object.keys(source).forEach((key: string) => {
-      const value = source[key]
+      const field = (this.config.searchFields || []).find((item: any) => item.prop === key)
+      const value = this.normalizePrefixedId(source[key], field && field.prefix)
       if (value !== '' && value !== null && value !== undefined) {
         params[key] = value
       }
     })
     return params
+  }
+
+  private normalizePrefixedId(value: any, prefix?: string) {
+    if (!prefix || typeof value !== 'string') {
+      return value
+    }
+    const normalized = value.trim()
+    return normalized.replace(new RegExp(`^${prefix}-`, 'i'), '')
   }
 
   private handleSearch() {
@@ -1008,11 +1032,41 @@ export default class extends Vue {
     return canUseResourceAction(this.resourceKey, action, UserModule.roles, UserModule.permissions)
   }
 
-  private openCreate() {
+  private async openCreate() {
     this.mode = 'create'
     this.orderIdempotencyToken = ''
     this.form = this.defaultModel(this.config.formFields || [])
+    if (this.config.endpoint === 'users') {
+      await this.loadStaffMemberOptions()
+    }
     this.dialogVisible = true
+  }
+
+  private fieldOptions(field: any) {
+    if (field.optionSource === 'staffMembers') {
+      return this.staffMemberOptions
+    }
+    return field.options || []
+  }
+
+  private async loadStaffMemberOptions() {
+    const [staffResponse, userResponse] = await Promise.all([
+      listRecords('staff-members', { page: 1, pageSize: 200, status: 1 }),
+      listRecords('users', { page: 1, pageSize: 200 })
+    ])
+    const staffPayload = staffResponse.data.data || {}
+    const userPayload = userResponse.data.data || {}
+    const assignedStaffIds = new Set(
+      (userPayload.records || [])
+        .map((user: any) => user.staffId)
+        .filter((staffId: any) => staffId !== null && staffId !== undefined)
+        .map((staffId: any) => String(staffId))
+    )
+    this.staffMemberOptions = (staffPayload.records || []).map((staff: any) => ({
+      label: `${staff.name}（EMP-${staff.id}）${assignedStaffIds.has(String(staff.id)) ? ' - 已有账号' : ''}`,
+      value: staff.id,
+      disabled: assignedStaffIds.has(String(staff.id))
+    }))
   }
 
   private openEdit(row: any) {
@@ -1048,7 +1102,11 @@ export default class extends Vue {
             : await createRecord(this.config.endpoint, payload)
         if (Number(response.data.code) === 200) {
           this.orderIdempotencyToken = ''
-          this.$message.success('保存成功')
+          this.$message.success(
+            this.mode === 'create' && this.config.endpoint === 'users'
+              ? '账号已创建，默认使用所选角色权限'
+              : '保存成功'
+          )
           this.dialogVisible = false
           this.loadData()
         }
@@ -1337,6 +1395,9 @@ export default class extends Vue {
     if (column.map) {
       return column.map[value] || value
     }
+    if (column.prefix) {
+      return `${column.prefix}-${value}`
+    }
     return value
   }
 
@@ -1498,12 +1559,19 @@ export default class extends Vue {
 .permission-target {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
   border: 1px solid #edf0f5;
   border-radius: 16px;
   margin-bottom: 16px;
   background: #fbfcfe;
+
+  div {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
 
   strong {
     color: #20242f;

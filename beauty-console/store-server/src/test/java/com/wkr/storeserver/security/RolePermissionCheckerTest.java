@@ -36,6 +36,7 @@ class RolePermissionCheckerTest {
         assertTrue(checker.isAllowed(RoleEnum.STAFF, "POST", "/admin/appointments"));
         assertTrue(checker.isAllowed(RoleEnum.STAFF, "PATCH", "/admin/service-orders/1/finish"));
         assertTrue(checker.isAllowed(RoleEnum.STAFF, "GET", "/admin/service-projects"));
+        assertTrue(checker.isAllowed(RoleEnum.STAFF, "GET", "/admin/dashboard/overview"));
         assertFalse(checker.isAllowed(RoleEnum.STAFF, "POST", "/admin/service-projects"));
         assertFalse(checker.isAllowed(RoleEnum.STAFF, "DELETE", "/admin/customers/1"));
         assertFalse(checker.isAllowed(RoleEnum.STAFF, "DELETE", "/admin/service-orders/1"));

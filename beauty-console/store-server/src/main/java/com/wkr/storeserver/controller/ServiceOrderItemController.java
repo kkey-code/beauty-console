@@ -3,12 +3,15 @@ package com.wkr.storeserver.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.wkr.storecommon.common.Result;
 import com.wkr.storecommon.exception.SystemException;
+import com.wkr.storecommon.exception.BusinessException;
 import com.wkr.storepojo.dto.ServiceOrderItemDTO;
 import com.wkr.storepojo.entity.ServiceOrderItem;
 import com.wkr.storepojo.entity.StaffMember;
 import com.wkr.storepojo.vo.ServiceOrderItemVO;
 import com.wkr.storeserver.service.ServiceOrderItemService;
+import com.wkr.storeserver.service.ServiceOrderService;
 import com.wkr.storeserver.service.StaffMemberService;
+import com.wkr.storeserver.support.DataScopeSupport;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -38,17 +41,21 @@ public class ServiceOrderItemController {
 
     private final ServiceOrderItemService serviceOrderItemService;
     private final StaffMemberService staffMemberService;
+    private final ServiceOrderService serviceOrderService;
 
     public ServiceOrderItemController(
             ServiceOrderItemService serviceOrderItemService,
-            StaffMemberService staffMemberService) {
+            StaffMemberService staffMemberService,
+            ServiceOrderService serviceOrderService) {
         this.serviceOrderItemService = serviceOrderItemService;
         this.staffMemberService = staffMemberService;
+        this.serviceOrderService = serviceOrderService;
     }
 
     @GetMapping
     @Operation(summary = "订单项目列表")
     public Result<List<ServiceOrderItemVO>> list(@RequestParam("orderId") Long orderId) {
+        serviceOrderService.assertCanAccess(orderId);
         LambdaQueryWrapper<ServiceOrderItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ServiceOrderItem::getOrderId, orderId);
 
@@ -62,8 +69,10 @@ public class ServiceOrderItemController {
     @PostMapping
     @Operation(summary = "创建服务订单项目")
     public Result<Long> create(@Valid @RequestBody ServiceOrderItemDTO dto) {
+        serviceOrderService.assertCanAccess(dto.getOrderId());
         ServiceOrderItem serviceOrderItem = new ServiceOrderItem();
         BeanUtils.copyProperties(dto, serviceOrderItem);
+        applyStaffScope(serviceOrderItem);
         serviceOrderItem.setCreateTime(LocalDateTime.now());
         serviceOrderItemService.save(serviceOrderItem);
 
@@ -73,9 +82,14 @@ public class ServiceOrderItemController {
     @PutMapping("/{id}")
     @Operation(summary = "修改订单项目")
     public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody ServiceOrderItemDTO dto) {
+        ServiceOrderItem existing = requireItem(id);
+        serviceOrderService.assertCanAccess(existing.getOrderId());
+        assertCanModifyItem(existing);
+        serviceOrderService.assertCanAccess(dto.getOrderId());
         ServiceOrderItem serviceOrderItem = new ServiceOrderItem();
         BeanUtils.copyProperties(dto, serviceOrderItem);
         serviceOrderItem.setId(id);
+        applyStaffScope(serviceOrderItem);
 
         boolean updated = serviceOrderItemService.updateById(serviceOrderItem);
         if (!updated) {
@@ -87,11 +101,36 @@ public class ServiceOrderItemController {
     @DeleteMapping("/{id}")
     @Operation(summary = "删除订单项目")
     public Result<Boolean> delete(@PathVariable("id") Long id) {
+        ServiceOrderItem existing = requireItem(id);
+        serviceOrderService.assertCanAccess(existing.getOrderId());
+        assertCanModifyItem(existing);
         boolean removed = serviceOrderItemService.removeById(id);
         if (!removed) {
             throw new SystemException("删除订单项目失败");
         }
         return Result.success(true);
+    }
+
+    private ServiceOrderItem requireItem(Long id) {
+        ServiceOrderItem item = serviceOrderItemService.getById(id);
+        if (item == null) {
+            throw new BusinessException("订单项目明细不存在");
+        }
+        return item;
+    }
+
+    private void applyStaffScope(ServiceOrderItem serviceOrderItem) {
+        Long staffId = DataScopeSupport.currentScopedStaffId();
+        if (staffId != null) {
+            serviceOrderItem.setStaffId(staffId);
+        }
+    }
+
+    private void assertCanModifyItem(ServiceOrderItem item) {
+        Long staffId = DataScopeSupport.currentScopedStaffId();
+        if (staffId != null && !staffId.equals(item.getStaffId())) {
+            throw new BusinessException("普通员工不能修改其他员工的订单项目");
+        }
     }
 
     private ServiceOrderItemVO toVO(ServiceOrderItem item) {

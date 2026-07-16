@@ -22,5 +22,7 @@ public interface SysUserService extends IService<SysUser> {
 
     SysUserVO getByID(Long id);
 
+    void validateStaffBinding(Long userId, Integer roleId, Long staffId);
+
     void updateStatus(Long id, Integer status);
 }

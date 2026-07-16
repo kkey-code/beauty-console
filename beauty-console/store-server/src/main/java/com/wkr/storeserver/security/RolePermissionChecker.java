@@ -89,7 +89,8 @@ public class RolePermissionChecker {
         }
         if (role == RoleEnum.STAFF) {
             return isStaffBusinessAllowed(method, path)
-                    || readRequest && matchesPath(path, "/admin/service-projects");
+                    || readRequest && (matchesPath(path, "/admin/service-projects")
+                    || matchesPath(path, "/admin/dashboard"));
         }
         return false;
     }

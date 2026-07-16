@@ -22,6 +22,10 @@ public interface ServiceOrderService extends IService<ServiceOrder> {
 
     List<ServiceOrderVO> listPendingOrderSummaries(int limit);
 
+    long countVisibleOrders();
+
+    void assertCanAccess(Long id);
+
     ServiceOrderVO getDetail(Long id);
 
     Long createOrder(ServiceOrderDTO dto);

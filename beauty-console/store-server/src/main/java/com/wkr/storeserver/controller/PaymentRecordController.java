@@ -11,6 +11,8 @@ import com.wkr.storepojo.entity.PaymentRecord;
 import com.wkr.storepojo.vo.PaymentRecordVO;
 import com.wkr.storeserver.audit.AuditLog;
 import com.wkr.storeserver.service.PaymentRecordService;
+import com.wkr.storeserver.service.ServiceOrderService;
+import com.wkr.storeserver.support.DataScopeSupport;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -37,9 +39,13 @@ import java.util.List;
 public class PaymentRecordController {
 
     private final PaymentRecordService paymentRecordService;
+    private final ServiceOrderService serviceOrderService;
 
-    public PaymentRecordController(PaymentRecordService paymentRecordService) {
+    public PaymentRecordController(
+            PaymentRecordService paymentRecordService,
+            ServiceOrderService serviceOrderService) {
         this.paymentRecordService = paymentRecordService;
+        this.serviceOrderService = serviceOrderService;
     }
 
     @GetMapping
@@ -55,6 +61,7 @@ public class PaymentRecordController {
                 .le(dto.getEndTime() != null, PaymentRecord::getPayTime, dto.getEndTime())
                 .orderByDesc(PaymentRecord::getPayTime)
                 .orderByDesc(PaymentRecord::getId);
+        applyDataScope(wrapper);
 
         Page<PaymentRecord> pageRecord = paymentRecordService.page(page, wrapper);
 
@@ -75,6 +82,7 @@ public class PaymentRecordController {
         if (record == null) {
             throw new BusinessException("收款流水不存在");
         }
+        serviceOrderService.assertCanAccess(record.getOrderId());
         return Result.success(toVO(record));
     }
 
@@ -82,6 +90,7 @@ public class PaymentRecordController {
     @Operation(summary = "新增收款记录")
     @AuditLog(action = "CREATE", target = "PAYMENT_RECORD")
     public Result<Long> save(@Valid @RequestBody PaymentRecordDTO dto) {
+        serviceOrderService.assertCanAccess(dto.getOrderId());
         return Result.success(paymentRecordService.createPaymentRecord(dto));
     }
 
@@ -89,7 +98,27 @@ public class PaymentRecordController {
     @Operation(summary = "作废收款记录")
     @AuditLog(action = "VOID", target = "PAYMENT_RECORD")
     public Result<Boolean> voidPaymentRecord(@PathVariable("id") Long id) {
+        PaymentRecord record = paymentRecordService.getById(id);
+        if (record == null) {
+            throw new BusinessException("收款流水不存在");
+        }
+        serviceOrderService.assertCanAccess(record.getOrderId());
         return Result.success(paymentRecordService.voidPaymentRecord(id));
+    }
+
+    private void applyDataScope(LambdaQueryWrapper<PaymentRecord> wrapper) {
+        Long staffId = DataScopeSupport.currentScopedStaffId();
+        if (staffId == null) {
+            return;
+        }
+        wrapper.and(scope -> scope
+                .exists("SELECT 1 FROM service_order_item soi_scope "
+                        + "WHERE soi_scope.order_id = payment_record.order_id AND soi_scope.staff_id = {0}", staffId)
+                .or()
+                .exists("SELECT 1 FROM service_order so_scope "
+                        + "JOIN appointment a_scope ON a_scope.id = so_scope.appointment_id "
+                        + "WHERE so_scope.id = payment_record.order_id "
+                        + "AND so_scope.deleted = 0 AND a_scope.deleted = 0 AND a_scope.staff_id = {0}", staffId));
     }
 
     private PaymentRecordVO toVO(PaymentRecord record) {

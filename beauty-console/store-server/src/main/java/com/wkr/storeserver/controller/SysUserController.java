@@ -97,6 +97,7 @@ public class SysUserController {
     @Operation(summary = "添加用户")
     @AuditLog(action = "CREATE", target = "USER")
     public Result<Long> add(@Valid @RequestBody SysUserDTO sysUserDTO) {
+        sysUserService.validateStaffBinding(null, sysUserDTO.getRoleId(), sysUserDTO.getStaffId());
         SysUser sysUser = new SysUser();
         BeanUtils.copyProperties(sysUserDTO, sysUser);
         sysUser.setPasswordHash(encodePasswordIfNecessary(sysUserDTO.getPasswordHash()));
@@ -114,6 +115,7 @@ public class SysUserController {
     @Operation(summary = "修改用户")
     @AuditLog(action = "UPDATE", target = "USER")
     public Result<?> update(@PathVariable("id") Long id, @Valid @RequestBody SysUserDTO sysUserDTO) {
+        sysUserService.validateStaffBinding(id, sysUserDTO.getRoleId(), sysUserDTO.getStaffId());
         SysUser sysUser = new SysUser();
         BeanUtils.copyProperties(sysUserDTO, sysUser);
         sysUser.setId(id);

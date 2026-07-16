@@ -1,7 +1,10 @@
 package com.wkr.storeserver.service;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.wkr.storecommon.common.BaseContext;
 import com.wkr.storecommon.common.PageResult;
 import com.wkr.storepojo.dto.ServiceOrderPageQueryDTO;
 import com.wkr.storepojo.entity.CustomerProfile;
@@ -16,10 +19,13 @@ import com.wkr.storepojo.enums.PayStatusEnum;
 import com.wkr.storepojo.vo.ServiceOrderVO;
 import com.wkr.storeserver.mapper.ServiceOrderMapper;
 import com.wkr.storeserver.service.impl.ServiceOrderServiceImpl;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -66,6 +72,9 @@ class ServiceOrderServiceImplPageTest {
 
     @BeforeEach
     void setUp() {
+        TableInfoHelper.initTableInfo(
+                new MapperBuilderAssistant(new MybatisConfiguration(), "service-order-page-test"),
+                ServiceOrder.class);
         service = new ServiceOrderServiceImpl(
                 serviceOrderMapper,
                 serviceOrderItemService,
@@ -78,6 +87,11 @@ class ServiceOrderServiceImplPageTest {
                 appointmentItemService,
                 deletionGuardService);
         ReflectionTestUtils.setField(service, "baseMapper", serviceOrderMapper);
+    }
+
+    @AfterEach
+    void clearContext() {
+        BaseContext.remove();
     }
 
     @Test
@@ -127,6 +141,21 @@ class ServiceOrderServiceImplPageTest {
         assertEquals(0L, result.getTotal());
         assertTrue(result.getRecords().isEmpty());
         verifyNoInteractions(customerProfileService, serviceOrderItemService, staffMemberService, paymentRecordService);
+    }
+
+    @Test
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    void staffPageAddsAssignedEmployeeSqlScope() {
+        BaseContext.setCurrentUser(9L, 5001L, 3, "STAFF");
+        when(serviceOrderMapper.selectPage(any(Page.class), any(Wrapper.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.pageOrders(new ServiceOrderPageQueryDTO());
+
+        ArgumentCaptor<Wrapper<ServiceOrder>> wrapperCaptor = ArgumentCaptor.forClass(Wrapper.class);
+        verify(serviceOrderMapper).selectPage(any(Page.class), wrapperCaptor.capture());
+        assertTrue(wrapperCaptor.getValue().getSqlSegment().contains("soi_scope.staff_id"));
+        assertTrue(wrapperCaptor.getValue().getSqlSegment().contains("a_scope.staff_id"));
     }
 
     private ServiceOrder order(Long id, Long customerId) {

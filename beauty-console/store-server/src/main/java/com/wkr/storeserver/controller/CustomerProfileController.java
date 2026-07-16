@@ -16,6 +16,7 @@ import com.wkr.storepojo.vo.CustomerProfileVO;
 import com.wkr.storeserver.audit.AuditLog;
 import com.wkr.storeserver.service.CustomerProfileService;
 import com.wkr.storeserver.service.DeletionGuardService;
+import com.wkr.storeserver.support.DataScopeSupport;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -67,7 +68,7 @@ public class CustomerProfileController {
                 .orderByDesc(CustomerProfile::getCreateTime)
                 .orderByDesc(CustomerProfile::getId);
 
-        IPage<CustomerProfile> pageResult = customerProfileService.page(page, wrapper);
+        IPage<CustomerProfile> pageResult = customerProfileService.pageVisible(page, wrapper);
 
         List<CustomerProfileVO> voList = new ArrayList<>();
         for (CustomerProfile customerProfile : pageResult.getRecords()) {
@@ -87,10 +88,7 @@ public class CustomerProfileController {
     @GetMapping("/{id}")
     @Operation(summary = "查询客户详情")
     public Result<CustomerProfileVO> get(@PathVariable("id") Long id) {
-        CustomerProfile customerProfile = customerProfileService.getById(id);
-        if (customerProfile == null) {
-            throw new BusinessException("客户不存在");
-        }
+        CustomerProfile customerProfile = customerProfileService.getVisibleById(id);
 
         CustomerProfileVO customerProfileVO = new CustomerProfileVO();
         BeanUtils.copyProperties(customerProfile, customerProfileVO);
@@ -102,9 +100,10 @@ public class CustomerProfileController {
     @PostMapping
     @Operation(summary = "添加客户")
     @AuditLog(action = "CREATE", target = "CUSTOMER")
-    public Result<?> add(@Valid @RequestBody CustomerProfileDTO dto) {
+    public Result<Long> add(@Valid @RequestBody CustomerProfileDTO dto) {
         CustomerProfile customerProfile = new CustomerProfile();
         BeanUtils.copyProperties(dto, customerProfile);
+        customerProfile.setOwnerStaffId(DataScopeSupport.currentScopedStaffId());
         customerProfile.setCreateTime(LocalDateTime.now());
         customerProfile.setUpdateTime(LocalDateTime.now());
 
@@ -112,13 +111,14 @@ public class CustomerProfileController {
         if (!saved) {
             throw new SystemException("添加客户失败");
         }
-        return Result.success();
+        return Result.success(customerProfile.getId());
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "修改客户")
     @AuditLog(action = "UPDATE", target = "CUSTOMER")
     public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody CustomerProfileDTO dto) {
+        customerProfileService.assertCanAccess(id);
         CustomerProfile customerProfile = new CustomerProfile();
         BeanUtils.copyProperties(dto, customerProfile);
         customerProfile.setId(id);
@@ -135,6 +135,7 @@ public class CustomerProfileController {
     @Operation(summary = "删除客户")
     @AuditLog(action = "DELETE", target = "CUSTOMER")
     public Result<Boolean> delete(@PathVariable("id") Long id) {
+        customerProfileService.assertCanAccess(id);
         deletionGuardService.assertCustomerCanDelete(id);
         boolean removed = customerProfileService.removeById(id);
         if (!removed) {

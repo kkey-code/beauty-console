@@ -1,6 +1,7 @@
 package com.wkr.storeserver;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.wkr.storecommon.common.PageResult;
@@ -145,13 +146,13 @@ class ControllerApiUnitTest {
                                 serviceProjectInventoryService,
                                 serviceProjectService,
                                 inventorySkuService),
-                        new ServiceOrderItemController(serviceOrderItemService, staffMemberService),
+                        new ServiceOrderItemController(serviceOrderItemService, staffMemberService, serviceOrderService),
                         new ServiceOrderController(serviceOrderService, orderIdempotencyService),
-                        new PaymentRecordController(paymentRecordService),
+                        new PaymentRecordController(paymentRecordService, serviceOrderService),
                         new InventoryStockLogController(inventoryStockLogService, inventorySkuService),
                         new InventorySkuController(inventorySkuService, deletionGuardService),
                         new CustomerProfileController(customerProfileService, deletionGuardService),
-                        new AppointmentItemController(appointmentItemService, serviceProjectService),
+                        new AppointmentItemController(appointmentItemService, serviceProjectService, appointmentService),
                         new AppointmentController(appointmentService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -412,7 +413,8 @@ class ControllerApiUnitTest {
         when(serviceProjectService.page(any(Page.class), any(Wrapper.class))).thenReturn(pageOf(serviceProject()));
         when(serviceProjectInventoryService.page(any(Page.class), any(Wrapper.class)))
                 .thenReturn(pageOf(serviceProjectInventory()));
-        when(customerProfileService.page(any(Page.class), any(Wrapper.class))).thenReturn(pageOf(customerProfile()));
+        when(customerProfileService.pageVisible(any(Page.class), any(LambdaQueryWrapper.class)))
+                .thenReturn(pageOf(customerProfile()));
         when(inventorySkuService.page(any(Page.class), any(Wrapper.class))).thenReturn(pageOf(inventorySku()));
         when(inventoryStockLogService.page(any(Page.class), any(Wrapper.class))).thenReturn(pageOf(stockLog("stock_in")));
         when(paymentRecordService.page(any(Page.class), any(Wrapper.class))).thenReturn(pageOf(paymentRecord(1)));
@@ -423,6 +425,7 @@ class ControllerApiUnitTest {
         when(serviceProjectService.getById(anyLong())).thenAnswer(invocation -> serviceProject());
         when(serviceProjectInventoryService.getById(anyLong())).thenAnswer(invocation -> serviceProjectInventory());
         when(customerProfileService.getById(anyLong())).thenAnswer(invocation -> customerProfile());
+        when(customerProfileService.getVisibleById(anyLong())).thenAnswer(invocation -> customerProfile());
         when(inventorySkuService.getById(anyLong())).thenAnswer(invocation -> inventorySku());
         when(inventorySkuService.getOne(any(Wrapper.class))).thenAnswer(invocation -> inventorySku());
         when(inventoryStockLogService.getById(anyLong())).thenAnswer(invocation -> stockLog("stock_in"));
@@ -435,7 +438,9 @@ class ControllerApiUnitTest {
         when(appointmentService.getById(anyLong())).thenAnswer(invocation -> appointment());
 
         when(appointmentItemService.list(any(Wrapper.class))).thenReturn(List.of(appointmentItem()));
+        when(appointmentItemService.getById(anyLong())).thenReturn(appointmentItem());
         when(serviceOrderItemService.list(any(Wrapper.class))).thenReturn(List.of(serviceOrderItem()));
+        when(serviceOrderItemService.getById(anyLong())).thenReturn(serviceOrderItem());
         when(customerProfileService.list(any(Wrapper.class))).thenReturn(List.of(customerProfile()));
         when(inventorySkuService.list(any(Wrapper.class))).thenReturn(List.of(inventorySku()));
 

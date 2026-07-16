@@ -80,7 +80,7 @@ class AdminApiIntegrationTest {
         user.setUsername("staff2");
         user.setPasswordHash("$2a$10$8CNVvlRfFo6bTbYtxDLW1edK3my3Esj0rXuV.pKqhLX4zUKpdqrRC");
         user.setRoleId(3);
-        user.setStaffId(2L);
+        user.setStaffId(4L);
         user.setStatus(0);
         user.setCreateTime(LocalDateTime.now());
         user.setUpdateTime(LocalDateTime.now());
@@ -145,6 +145,45 @@ class AdminApiIntegrationTest {
                         .param("page", "1")
                         .param("pageSize", "10"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void staffOnlySeesCustomersAppointmentsAndOrdersRelatedToSelf() throws Exception {
+        String token = loginAndGetToken("staff_scope");
+
+        mockMvc.perform(get("/admin/customers")
+                        .header("token", token)
+                        .param("page", "1")
+                        .param("pageSize", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.records[0].name").value("Staff Customer"));
+
+        mockMvc.perform(get("/admin/appointments")
+                        .header("token", token)
+                        .param("page", "1")
+                        .param("pageSize", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.records[0].appointmentNo").value("APT-IT-STAFF"));
+
+        mockMvc.perform(get("/admin/service-orders")
+                        .header("token", token)
+                        .param("page", "1")
+                        .param("pageSize", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.records[0].orderNo").value("ORD-IT-STAFF"));
+
+        mockMvc.perform(get("/admin/dashboard/overview")
+                        .header("token", token)
+                        .param("refresh", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.customerTotal").value(1))
+                .andExpect(jsonPath("$.data.appointmentTotal").value(1))
+                .andExpect(jsonPath("$.data.orderTotal").value(1))
+                .andExpect(jsonPath("$.data.appointments.length()").value(1))
+                .andExpect(jsonPath("$.data.pendingOrders.length()").value(1));
     }
 
     @Test

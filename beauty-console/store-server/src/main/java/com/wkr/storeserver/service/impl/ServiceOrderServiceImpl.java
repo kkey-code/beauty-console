@@ -40,6 +40,7 @@ import com.wkr.storeserver.service.ServiceOrderService;
 import com.wkr.storeserver.service.ServiceProjectInventoryService;
 import com.wkr.storeserver.service.StaffMemberService;
 import com.wkr.storeserver.support.BusinessNoGenerator;
+import com.wkr.storeserver.support.DataScopeSupport;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -113,11 +114,12 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
     @Override
     public List<ServiceOrderVO> listPendingOrderSummaries(int limit) {
         int normalizedLimit = Math.max(1, Math.min(limit, 50));
-        List<ServiceOrder> orders = list(new LambdaQueryWrapper<ServiceOrder>()
+        LambdaQueryWrapper<ServiceOrder> wrapper = new LambdaQueryWrapper<ServiceOrder>()
                 .eq(ServiceOrder::getOrderStatus, OrderStatusEnum.PENDING.getCode())
                 .orderByDesc(ServiceOrder::getUpdateTime)
                 .orderByDesc(ServiceOrder::getId)
-                .last("LIMIT " + normalizedLimit));
+                .last("LIMIT " + normalizedLimit);
+        List<ServiceOrder> orders = list(applyDataScope(wrapper));
         if (orders == null || orders.isEmpty()) {
             return List.of();
         }
@@ -130,6 +132,23 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
         return orders.stream()
                 .map(order -> toBasicVO(order, customerById.get(order.getCustomerId())))
                 .toList();
+    }
+
+    @Override
+    public long countVisibleOrders() {
+        return count(applyDataScope(new LambdaQueryWrapper<>()));
+    }
+
+    @Override
+    public void assertCanAccess(Long id) {
+        if (!DataScopeSupport.isStaffSelfScope()) {
+            return;
+        }
+        ServiceOrder serviceOrder = getById(id);
+        if (serviceOrder == null) {
+            throw new BusinessException("订单不存在");
+        }
+        assertCanAccess(serviceOrder);
     }
 
     @Override
@@ -153,6 +172,8 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
         if (dto.getItems() == null || dto.getItems().isEmpty()) {
             throw new BusinessException("订单至少需要一条项目明细");
         }
+        customerProfileService.assertCanAccess(dto.getCustomerId());
+        applyStaffScopeToItems(dto.getItems());
 
         ServiceOrder serviceOrder = new ServiceOrder();
         BeanUtils.copyProperties(dto, serviceOrder);
@@ -177,6 +198,7 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
     @Override
     @Transactional
     public Long createFromAppointment(Long appointmentId, String requestId) {
+        appointmentService.assertCanAccess(appointmentId);
         Long existingOrderId = findOrderIdByRequestId(requestId);
         if (existingOrderId != null) {
             return existingOrderId;
@@ -221,6 +243,11 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
     @Transactional
     public boolean updateOrder(Long id, ServiceOrderDTO dto) {
         getExistingOrder(id);
+        customerProfileService.assertCanAccess(dto.getCustomerId());
+
+        if (dto.getItems() != null) {
+            applyStaffScopeToItems(dto.getItems());
+        }
 
         ServiceOrder serviceOrder = new ServiceOrder();
         BeanUtils.copyProperties(dto, serviceOrder);
@@ -269,6 +296,7 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
 
     @Override
     public List<ServiceOrderItemVO> getOrderItemsByOrderId(Long orderId) {
+        assertCanAccess(orderId);
         LambdaQueryWrapper<ServiceOrderItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ServiceOrderItem::getOrderId, orderId);
         List<ServiceOrderItem> itemList = serviceOrderItemService.list(wrapper);
@@ -285,6 +313,7 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
 
     @Override
     public List<PaymentRecordVO> getPaymentRecordByOrderId(Long orderId) {
+        assertCanAccess(orderId);
         LambdaQueryWrapper<PaymentRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(PaymentRecord::getOrderId, orderId);
         List<PaymentRecord> paymentRecordList = paymentRecordService.list(wrapper);
@@ -352,7 +381,7 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
                 wrapper.in(ServiceOrder::getCustomerId, customerIds);
             }
         }
-        return wrapper;
+        return applyDataScope(wrapper);
     }
 
     private ServiceOrder getExistingOrder(Long id) {
@@ -360,6 +389,7 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
         if (serviceOrder == null) {
             throw new BusinessException("订单不存在");
         }
+        assertCanAccess(serviceOrder);
         return serviceOrder;
     }
 
@@ -371,7 +401,54 @@ public class ServiceOrderServiceImpl extends ServiceImpl<ServiceOrderMapper, Ser
         if (serviceOrder == null) {
             throw new BusinessException("订单不存在");
         }
+        assertCanAccess(serviceOrder);
         return serviceOrder;
+    }
+
+    private LambdaQueryWrapper<ServiceOrder> applyDataScope(LambdaQueryWrapper<ServiceOrder> wrapper) {
+        Long staffId = DataScopeSupport.currentScopedStaffId();
+        if (staffId == null) {
+            return wrapper;
+        }
+        return wrapper.and(scope -> scope
+                .exists("SELECT 1 FROM service_order_item soi_scope "
+                        + "WHERE soi_scope.order_id = service_order.id AND soi_scope.staff_id = {0}", staffId)
+                .or()
+                .exists("SELECT 1 FROM appointment a_scope "
+                        + "WHERE a_scope.id = service_order.appointment_id "
+                        + "AND a_scope.deleted = 0 AND a_scope.staff_id = {0}", staffId));
+    }
+
+    private void assertCanAccess(ServiceOrder serviceOrder) {
+        Long staffId = DataScopeSupport.currentScopedStaffId();
+        if (staffId == null) {
+            return;
+        }
+        if (serviceOrder.getAppointmentId() != null) {
+            Appointment appointment = appointmentService.getById(serviceOrder.getAppointmentId());
+            if (appointment != null && staffId.equals(appointment.getStaffId())) {
+                return;
+            }
+        }
+        long assignedItems = serviceOrderItemService.count(new LambdaQueryWrapper<ServiceOrderItem>()
+                .eq(ServiceOrderItem::getOrderId, serviceOrder.getId())
+                .eq(ServiceOrderItem::getStaffId, staffId));
+        if (assignedItems == 0) {
+            throw new BusinessException("无权访问其他员工的订单");
+        }
+    }
+
+    private void applyStaffScopeToItems(List<ServiceOrderItemDTO> items) {
+        Long staffId = DataScopeSupport.currentScopedStaffId();
+        if (staffId == null || items == null) {
+            return;
+        }
+        for (ServiceOrderItemDTO item : items) {
+            if (item.getStaffId() != null && !staffId.equals(item.getStaffId())) {
+                throw new BusinessException("普通员工不能把订单项目分配给其他员工");
+            }
+            item.setStaffId(staffId);
+        }
     }
 
     private List<ServiceOrderItem> listOrderItems(Long orderId) {

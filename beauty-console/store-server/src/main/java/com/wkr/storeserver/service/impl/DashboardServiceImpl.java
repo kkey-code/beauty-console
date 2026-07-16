@@ -72,14 +72,14 @@ public class DashboardServiceImpl implements DashboardService {
 
         DashboardOverviewVO overview = new DashboardOverviewVO();
         if (canView(role, permissions, "customers:view")) {
-            overview.setCustomerTotal(customerProfileService.count());
+            overview.setCustomerTotal(customerProfileService.countVisibleCustomers());
         }
         if (canView(role, permissions, "appointments:view")) {
-            overview.setAppointmentTotal(appointmentService.count());
+            overview.setAppointmentTotal(appointmentService.countVisibleAppointments());
             overview.setAppointments(appointmentService.listRecent(DASHBOARD_LIST_SIZE));
         }
         if (canView(role, permissions, "serviceOrders:view")) {
-            overview.setOrderTotal(serviceOrderService.count());
+            overview.setOrderTotal(serviceOrderService.countVisibleOrders());
             overview.setPendingOrders(serviceOrderService.listPendingOrderSummaries(DASHBOARD_LIST_SIZE));
         }
         if (canView(role, permissions, "inventorySkus:view")) {

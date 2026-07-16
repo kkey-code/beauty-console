@@ -1,5 +1,6 @@
 package com.wkr.storeserver.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -16,6 +17,7 @@ import com.wkr.storepojo.vo.LoginUserVO;
 import com.wkr.storepojo.vo.SysUserVO;
 import com.wkr.storeserver.mapper.SysUserMapper;
 import com.wkr.storeserver.service.PermissionPointService;
+import com.wkr.storeserver.service.StaffMemberService;
 import com.wkr.storeserver.service.SysUserService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -35,16 +37,19 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     private final JwtProperties jwtProperties;
     private final PasswordEncoder passwordEncoder;
     private final PermissionPointService permissionPointService;
+    private final StaffMemberService staffMemberService;
 
     public SysUserServiceImpl(
             SysUserMapper sysUserMapper,
             JwtProperties jwtProperties,
             PasswordEncoder passwordEncoder,
-            PermissionPointService permissionPointService) {
+            PermissionPointService permissionPointService,
+            StaffMemberService staffMemberService) {
         this.sysUserMapper = sysUserMapper;
         this.jwtProperties = jwtProperties;
         this.passwordEncoder = passwordEncoder;
         this.permissionPointService = permissionPointService;
+        this.staffMemberService = staffMemberService;
     }
 
     @Override
@@ -111,6 +116,27 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         }
         fillUserDisplayFields(sysUserVO);
         return sysUserVO;
+    }
+
+    @Override
+    public void validateStaffBinding(Long userId, Integer roleId, Long staffId) {
+        if (RoleEnum.fromCode(roleId) == null) {
+            throw new BusinessException("用户角色无效");
+        }
+        if (staffId == null) {
+            throw new BusinessException("每个账号必须关联一名员工");
+        }
+        if (staffMemberService.getById(staffId) == null) {
+            throw new BusinessException("关联员工不存在");
+        }
+        LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getStaffId, staffId);
+        if (userId != null) {
+            wrapper.ne(SysUser::getId, userId);
+        }
+        if (sysUserMapper.selectCount(wrapper) > 0) {
+            throw new BusinessException("该员工已有账号，一个员工只能关联一个账号");
+        }
     }
 
     @Override

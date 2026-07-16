@@ -8,7 +8,9 @@ import com.wkr.storepojo.entity.AppointmentItem;
 import com.wkr.storepojo.entity.ServiceProject;
 import com.wkr.storepojo.vo.AppointmentItemVO;
 import com.wkr.storeserver.service.AppointmentItemService;
+import com.wkr.storeserver.service.AppointmentService;
 import com.wkr.storeserver.service.ServiceProjectService;
+import com.wkr.storeserver.support.DataScopeSupport;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -39,17 +41,21 @@ public class AppointmentItemController {
 
     private final AppointmentItemService appointmentItemService;
     private final ServiceProjectService serviceProjectService;
+    private final AppointmentService appointmentService;
 
     public AppointmentItemController(
             AppointmentItemService appointmentItemService,
-            ServiceProjectService serviceProjectService) {
+            ServiceProjectService serviceProjectService,
+            AppointmentService appointmentService) {
         this.appointmentItemService = appointmentItemService;
         this.serviceProjectService = serviceProjectService;
+        this.appointmentService = appointmentService;
     }
 
     @GetMapping
     @Operation(summary = "预约项目列表")
     public Result<List<AppointmentItemVO>> list(@RequestParam("appointmentId") Long appointmentId) {
+        appointmentService.assertCanAccess(appointmentId);
         LambdaQueryWrapper<AppointmentItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(AppointmentItem::getAppointmentId, appointmentId);
 
@@ -65,8 +71,10 @@ public class AppointmentItemController {
     @PostMapping
     @Operation(summary = "新增预约项目")
     public Result<Long> save(@Valid @RequestBody AppointmentItemDTO appointmentItemDTO) {
+        appointmentService.assertCanAccess(appointmentItemDTO.getAppointmentId());
         AppointmentItem appointmentItem = new AppointmentItem();
         BeanUtils.copyProperties(appointmentItemDTO, appointmentItem);
+        applyStaffScope(appointmentItem);
         appointmentItem.setCreateTime(LocalDateTime.now());
 
         boolean saved = appointmentItemService.save(appointmentItem);
@@ -79,9 +87,14 @@ public class AppointmentItemController {
     @PutMapping("/{id}")
     @Operation(summary = "修改预约项目明细")
     public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody AppointmentItemDTO appointmentItemDTO) {
+        AppointmentItem existing = requireItem(id);
+        appointmentService.assertCanAccess(existing.getAppointmentId());
+        assertCanModifyItem(existing);
+        appointmentService.assertCanAccess(appointmentItemDTO.getAppointmentId());
         AppointmentItem appointmentItem = new AppointmentItem();
         BeanUtils.copyProperties(appointmentItemDTO, appointmentItem);
         appointmentItem.setId(id);
+        applyStaffScope(appointmentItem);
 
         boolean updated = appointmentItemService.updateById(appointmentItem);
         return Result.success(updated);
@@ -90,8 +103,33 @@ public class AppointmentItemController {
     @DeleteMapping("/{id}")
     @Operation(summary = "删除预约项目")
     public Result<Boolean> delete(@PathVariable("id") Long id) {
+        AppointmentItem existing = requireItem(id);
+        appointmentService.assertCanAccess(existing.getAppointmentId());
+        assertCanModifyItem(existing);
         boolean removed = appointmentItemService.removeById(id);
         return Result.success(removed);
+    }
+
+    private AppointmentItem requireItem(Long id) {
+        AppointmentItem item = appointmentItemService.getById(id);
+        if (item == null) {
+            throw new BusinessException("预约项目明细不存在");
+        }
+        return item;
+    }
+
+    private void applyStaffScope(AppointmentItem appointmentItem) {
+        Long staffId = DataScopeSupport.currentScopedStaffId();
+        if (staffId != null) {
+            appointmentItem.setStaffId(staffId);
+        }
+    }
+
+    private void assertCanModifyItem(AppointmentItem item) {
+        Long staffId = DataScopeSupport.currentScopedStaffId();
+        if (staffId != null && !staffId.equals(item.getStaffId())) {
+            throw new BusinessException("普通员工不能修改其他员工的预约项目");
+        }
     }
 
     private AppointmentItemVO toVO(AppointmentItem appointmentItem) {

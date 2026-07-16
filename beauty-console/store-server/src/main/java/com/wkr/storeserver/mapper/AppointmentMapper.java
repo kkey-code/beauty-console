@@ -17,7 +17,12 @@ import org.apache.ibatis.annotations.Param;
 public interface AppointmentMapper extends BaseMapper<Appointment> {
 
 
-    IPage<AppointmentVO> list(Page<AppointmentVO> page, @Param("dto") AppointmentPageQueryDTO dto);
+    IPage<AppointmentVO> list(
+            Page<AppointmentVO> page,
+            @Param("dto") AppointmentPageQueryDTO dto,
+            @Param("scopedStaffId") Long scopedStaffId);
+
+    long countVisibleAppointmentsByStaff(@Param("staffId") Long staffId);
 }
 
 

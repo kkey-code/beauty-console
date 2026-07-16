@@ -21,6 +21,10 @@ public interface AppointmentService extends IService<Appointment> {
 
     List<AppointmentVO> listRecent(int limit);
 
+    long countVisibleAppointments();
+
+    void assertCanAccess(Long id);
+
     AppointmentVO getByID(Long id);
 
     boolean createAppointment(AppointmentDTO dto);

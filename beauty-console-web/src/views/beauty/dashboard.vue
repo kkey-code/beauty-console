@@ -2,8 +2,8 @@
   <div class="beauty-dashboard">
     <div class="dashboard-hero">
       <div>
-        <p>门店经营概览</p>
-        <h1>今天先看预约、订单和库存风险</h1>
+        <p>{{ isStaffSelfScope ? '我的工作概览' : '门店经营概览' }}</p>
+        <h1>{{ isStaffSelfScope ? '只展示分配给我的预约和订单' : '今天先看预约、订单和库存风险' }}</h1>
       </div>
       <el-button
         type="primary"
@@ -29,7 +29,7 @@
     <div class="dashboard-grid">
       <div v-if="canView('serviceOrders')" class="panel">
         <div class="panel-title">
-          <strong>待服务订单</strong>
+          <strong>{{ isStaffSelfScope ? '我的待服务订单' : '待服务订单' }}</strong>
           <el-button type="text" @click="$router.push('/service-orders')">
             查看全部
           </el-button>
@@ -48,7 +48,7 @@
 
       <div v-if="canView('appointments')" class="panel">
         <div class="panel-title">
-          <strong>近期预约</strong>
+          <strong>{{ isStaffSelfScope ? '我的近期预约' : '近期预约' }}</strong>
           <el-button type="text" @click="$router.push('/appointments')">
             查看全部
           </el-button>
@@ -125,6 +125,10 @@ export default class extends Vue {
     return this.quickLinks.filter((item: any) => this.canViewOrAction(item.resource, item.action))
   }
 
+  get isStaffSelfScope() {
+    return UserModule.roles.some((role: string) => role === 'STAFF')
+  }
+
   mounted() {
     this.loadData(false)
   }
@@ -139,9 +143,9 @@ export default class extends Vue {
       const payload = (((response || {}).data || {}).data || {}) as any
 
       this.metrics = [
-        { ...this.metrics[0], value: Number(payload.customerTotal || 0) },
-        { ...this.metrics[1], value: Number(payload.appointmentTotal || 0) },
-        { ...this.metrics[2], value: Number(payload.orderTotal || 0) },
+        { ...this.metrics[0], label: this.isStaffSelfScope ? '我的服务客户' : '客户总数', value: Number(payload.customerTotal || 0) },
+        { ...this.metrics[1], label: this.isStaffSelfScope ? '我的预约' : '预约总数', value: Number(payload.appointmentTotal || 0) },
+        { ...this.metrics[2], label: this.isStaffSelfScope ? '我的订单' : '订单总数', value: Number(payload.orderTotal || 0) },
         { ...this.metrics[3], value: Number(payload.inventoryTotal || 0) }
       ]
       this.pendingOrders = payload.pendingOrders || []
