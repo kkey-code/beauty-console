@@ -54,6 +54,7 @@ public class DatabaseCompatibilityInitializer implements ApplicationRunner {
         ensureCustomerOwnerColumn();
         ensureOneAccountPerStaffIndex();
         ensurePermissionManagementPoints();
+        ensureDashboardPermissionPath();
         sysUserService.ensureAccountsForAllStaff();
     }
 
@@ -110,6 +111,13 @@ public class DatabaseCompatibilityInitializer implements ApplicationRunner {
                         + "JOIN sys_permission permission ON permission.permission_code IN "
                         + "('roles:permissions', 'users:resetPassword')"
                         + ") role_permission");
+    }
+
+    private void ensureDashboardPermissionPath() {
+        jdbcTemplate.update(
+                "UPDATE sys_permission SET method = 'GET', path_pattern = '/admin/dashboard/**', "
+                        + "update_time = NOW() WHERE permission_code = 'dashboard:view' "
+                        + "AND (method <> 'GET' OR path_pattern <> '/admin/dashboard/**')");
     }
 
     private boolean columnExists(String tableName, String columnName) {

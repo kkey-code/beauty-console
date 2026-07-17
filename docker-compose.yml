@@ -1,0 +1,101 @@
+name: beauty-console
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_change_me}
+      MYSQL_DATABASE: ${STORE_DB_DATABASE:-db_platform}
+      MYSQL_USER: ${STORE_DB_USERNAME:-store_app}
+      MYSQL_PASSWORD: ${STORE_DB_PASSWORD:-store_app_change_me}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./beauty-console/store-server/src/main/resources/sql/docker/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./beauty-console/store-server/src/main/resources/sql/patch_permission_points.sql:/docker-entrypoint-initdb.d/02-permission-points.sql:ro
+      - ./beauty-console/store-server/src/main/resources/sql/patch_role_permissions.sql:/docker-entrypoint-initdb.d/03-role-permissions.sql:ro
+      - ./beauty-console/store-server/src/main/resources/sql/patch_test_role_accounts.sql:/docker-entrypoint-initdb.d/04-test-accounts.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u$${MYSQL_USER} -p$${MYSQL_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${STORE_REDIS_PASSWORD:-store_redis_change_me}
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${STORE_REDIS_PASSWORD:-store_redis_change_me}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+
+  app:
+    build:
+      context: ./beauty-console
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      SPRING_PROFILES_ACTIVE: prod
+      STORE_PORT: 8080
+      STORE_DB_HOST: mysql
+      STORE_DB_PORT: 3306
+      STORE_DB_DATABASE: ${STORE_DB_DATABASE:-db_platform}
+      STORE_DB_USERNAME: ${STORE_DB_USERNAME:-store_app}
+      STORE_DB_PASSWORD: ${STORE_DB_PASSWORD:-store_app_change_me}
+      STORE_REDIS_HOST: redis
+      STORE_REDIS_PORT: 6379
+      STORE_REDIS_PASSWORD: ${STORE_REDIS_PASSWORD:-store_redis_change_me}
+      STORE_REDIS_DATABASE: ${STORE_REDIS_DATABASE:-0}
+      STORE_JWT_ADMIN_SECRET_KEY: ${STORE_JWT_ADMIN_SECRET_KEY:-replace_with_a_long_random_secret}
+      STORE_JWT_ADMIN_TTL: ${STORE_JWT_ADMIN_TTL:-7200000}
+      STORE_API_DOCS_ENABLED: ${STORE_API_DOCS_ENABLED:-true}
+    ports:
+      - "${STORE_PORT:-8080}:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  web:
+    build:
+      context: ./beauty-console-web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${STORE_WEB_PORT:-80}:80"
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mysql-data:
+  redis-data:

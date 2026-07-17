@@ -1,0 +1,33 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${STORE_DB_HOST}:${STORE_DB_PORT:3306}/${STORE_DB_DATABASE:db_platform}?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${STORE_DB_USERNAME}
+    password: ${STORE_DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${STORE_DB_POOL_SIZE:20}
+      minimum-idle: ${STORE_DB_POOL_MIN_IDLE:5}
+
+  data:
+    redis:
+      host: ${STORE_REDIS_HOST}
+      port: ${STORE_REDIS_PORT:6379}
+      password: ${STORE_REDIS_PASSWORD}
+      database: ${STORE_REDIS_DATABASE:0}
+      timeout: 3000ms
+
+sky:
+  jwt:
+    admin-secret-key: ${STORE_JWT_ADMIN_SECRET_KEY}
+    admin-ttl: ${STORE_JWT_ADMIN_TTL:7200000}
+    admin-token-name: ${STORE_JWT_ADMIN_TOKEN_NAME:token}
+
+springdoc:
+  api-docs:
+    enabled: ${STORE_API_DOCS_ENABLED:false}
+  swagger-ui:
+    enabled: ${STORE_API_DOCS_ENABLED:false}
